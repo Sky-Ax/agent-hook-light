@@ -58,6 +58,28 @@ try {
       throw "Hook command still exists for $event after uninstall."
     }
   }
+
+  $runtimeData = Join-Path $Temp "data"
+  New-Item -ItemType Directory -Path $runtimeData | Out-Null
+  Set-Content -LiteralPath (Join-Path $runtimeData ".gitkeep") -Value "" -Encoding UTF8
+  Set-Content -LiteralPath (Join-Path $runtimeData "codex-status.json") -Value "{}" -Encoding UTF8
+  Set-Content -LiteralPath (Join-Path $runtimeData "codex-hook-log.jsonl") -Value "{}" -Encoding UTF8
+  Set-Content -LiteralPath (Join-Path $runtimeData "codex-hook-log.jsonl.1") -Value "{}" -Encoding UTF8
+  Set-Content -LiteralPath (Join-Path $runtimeData "codex-hook-wrapper.log") -Value "log" -Encoding UTF8
+
+  $purge = Run-Install -ScriptArgs @("-Uninstall", "-PurgeData", "-CodexHome", $Temp, "-DataDir", $runtimeData)
+  if ($purge.Code -ne 0) {
+    throw "Purge uninstall failed: $($purge.Output)"
+  }
+
+  foreach ($file in "codex-status.json", "codex-hook-log.jsonl", "codex-hook-log.jsonl.1", "codex-hook-wrapper.log") {
+    if (Test-Path -LiteralPath (Join-Path $runtimeData $file)) {
+      throw "Runtime file was not removed: $file"
+    }
+  }
+  if (!(Test-Path -LiteralPath (Join-Path $runtimeData ".gitkeep"))) {
+    throw ".gitkeep should not be removed by purge."
+  }
 } finally {
   Remove-Item -LiteralPath $Temp -Recurse -Force -ErrorAction SilentlyContinue
 }

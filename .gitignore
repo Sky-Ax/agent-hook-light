@@ -1,7 +1,9 @@
 # Runtime status and logs
 data/*.json
 data/*.jsonl
+data/*.jsonl.*
 data/*.log
+data/*.log.*
 
 # Local editor metadata
 .idea/
@@ -10,4 +12,3 @@ data/*.log
 # OS files
 Thumbs.db
 Desktop.ini
-

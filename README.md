@@ -26,7 +26,7 @@ This project is designed as a small but extensible bridge between:
 ```text
 Codex Hooks
     ↓
-codex-hook.js
+ai-hook-bridge.exe hook
     ↓
 data/codex-status.json
     ↓
@@ -43,7 +43,7 @@ ESP32-C3 + WS2812 LED Ring
 
 | Mode | Status | Description |
 | --- | --- | --- |
-| Codex Hook Capture | Supported | Captures Codex hook events and writes normalized status to `data/codex-status.json`. |
+| Codex Hook Capture | Supported | Captures Codex hook events through the Go executable and writes normalized status to `data/codex-status.json`. |
 | File Watch Bridge | Supported | Go bridge watches the local status file and sends changes to the device. |
 | USB Serial Control | Supported | Sends status text to ESP32 over a COM port such as `COM4`. |
 | ESP32-C3 LED Ring | Supported | Tested with ESP32-C3 and a 24 LED WS2812B ring on GPIO10. |
@@ -106,6 +106,18 @@ Check the setup:
 .\check.cmd
 ```
 
+Uninstall hooks only:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\bin\install.ps1 -Uninstall
+```
+
+Uninstall hooks, stop the local bridge process, and remove runtime status/log files:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\bin\install.ps1 -Uninstall -StopBridge -PurgeData
+```
+
 Start the serial bridge:
 
 ```powershell
@@ -118,22 +130,49 @@ Build the Go bridge after changing `bridge/main.go`:
 .\bin\build-bridge.cmd
 ```
 
+Run the hook path manually:
+
+```powershell
+'{"hook_event_name":"UserPromptSubmit","session_id":"manual-test"}' | .\bin\ai-hook-bridge.exe hook
+```
+
+## Log Rotation
+
+Hook logs are written to `data/codex-hook-log.jsonl`. The Go hook rotates this log by default:
+
+- Maximum active log size: `10MB`
+- Rotated files kept: `5`
+- Rotated file names: `codex-hook-log.jsonl.1`, `codex-hook-log.jsonl.2`, ...
+
+Optional environment variables:
+
+| Variable | Description |
+| --- | --- |
+| `AI_HOOK_LOG_MAX_BYTES` | Maximum active log size before rotation. |
+| `AI_HOOK_LOG_BACKUPS` | Number of rotated log files to keep. |
+| `AI_HOOK_DISABLE_LOG=1` | Disable hook JSONL logging. |
+| `CODEX_HOOK_LOG_RAW=1` | Debug only. Include the raw hook event in logs. This may contain sensitive content. |
+
 ## Project Structure
 
 ```text
 bin/
   codex-hook.cmd       Codex hook command wrapper
-  codex-hook.js        Codex hook event parser
   ai-hook-bridge.exe   Built Go serial bridge
   build-bridge.cmd     Build the Go bridge
   start-bridge.cmd     Start the Go bridge
   install.ps1          Hook installer/checker
 bridge/
-  main.go              Go bridge source
+  main.go              CLI entrypoint and mode dispatch
+  bridge.go            Status-file watcher and serial bridge
+  hook.go              Codex hook event parser and status writer
+  log.go               Rotating hook JSONL log writer
+  types.go             Shared status and config structs
+  util.go              Project root, env, time, and console helpers
+  main_test.go         Go tests
 data/
   .gitkeep             Runtime data directory placeholder
 test/
-  codex-hook.test.js
   install.test.ps1
 install.cmd            Interactive installer
 check.cmd              Setup checker
@@ -146,7 +185,6 @@ Runtime status and logs are written under `data/` and ignored by Git.
 Run tests:
 
 ```powershell
-node .\test\codex-hook.test.js
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\test\install.test.ps1
 cd bridge
 go test ./...

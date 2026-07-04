@@ -3,7 +3,10 @@ param(
   [switch]$Install,
   [switch]$Uninstall,
   [switch]$Interactive,
-  [string]$CodexHome = (Join-Path $env:USERPROFILE ".codex")
+  [switch]$PurgeData,
+  [switch]$StopBridge,
+  [string]$CodexHome = (Join-Path $env:USERPROFILE ".codex"),
+  [string]$DataDir = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -12,13 +15,22 @@ $Events = @("UserPromptSubmit", "PreToolUse", "PostToolUse", "PermissionRequest"
 $BinDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $Root = Split-Path -Parent $BinDir
 $HookCommand = Join-Path $BinDir "codex-hook.cmd"
-$HookScript = Join-Path $BinDir "codex-hook.js"
 $BridgeExe = Join-Path $BinDir "ai-hook-bridge.exe"
+if ([string]::IsNullOrWhiteSpace($DataDir)) {
+  $DataDir = Join-Path $Root "data"
+}
 $LegacyHookCommands = @(
   (Join-Path $Root "codex-hook.cmd")
 )
 $HooksPath = Join-Path $CodexHome "hooks.json"
 $StatusMessage = "Recording Codex status"
+$RuntimeDataPatterns = @(
+  "codex-status.json",
+  "codex-hook-log.jsonl",
+  "codex-hook-log.jsonl.*",
+  "codex-hook-wrapper.log",
+  "codex-hook-wrapper.log.*"
+)
 
 function Count-Modes {
   $count = 0
@@ -166,6 +178,40 @@ function Uninstall-Hooks {
   Write-Host "Uninstalled: $HookCommand"
 }
 
+function Stop-BridgeProcess {
+  if (!(Test-Path -LiteralPath $BridgeExe)) {
+    return
+  }
+
+  $bridgePath = [IO.Path]::GetFullPath($BridgeExe)
+  $processes = @(Get-CimInstance Win32_Process -Filter "Name = 'ai-hook-bridge.exe'" -ErrorAction SilentlyContinue | Where-Object {
+    $_.ExecutablePath -and ([IO.Path]::GetFullPath($_.ExecutablePath) -ieq $bridgePath)
+  })
+
+  foreach ($process in $processes) {
+    try {
+      Stop-Process -Id $process.ProcessId -Force -ErrorAction Stop
+      Write-Host "Stopped bridge process: $($process.ProcessId)"
+    } catch {
+      Write-Host "WARNING: failed to stop bridge process $($process.ProcessId): $($_.Exception.Message)"
+    }
+  }
+}
+
+function Remove-RuntimeData {
+  if (!(Test-Path -LiteralPath $DataDir)) {
+    return
+  }
+
+  foreach ($pattern in $RuntimeDataPatterns) {
+    $files = @(Get-ChildItem -LiteralPath $DataDir -Filter $pattern -File -ErrorAction SilentlyContinue)
+    foreach ($file in $files) {
+      Remove-Item -LiteralPath $file.FullName -Force
+      Write-Host "Removed: $($file.FullName)"
+    }
+  }
+}
+
 function Test-HookInstalled {
   param($Data, [string]$Event)
 
@@ -186,21 +232,9 @@ function Test-HookInstalled {
 
 function Check-Setup {
   $errors = @()
-  $node = Get-Command node -ErrorAction SilentlyContinue
-
-  if (!$node) {
-    $errors += "node was not found in PATH."
-  } else {
-    $version = (& node -v 2>$null)
-    Write-Host "Node: $version"
-  }
 
   if (!(Test-Path -LiteralPath $HookCommand)) {
     $errors += "Missing hook command: $HookCommand"
-  }
-
-  if (!(Test-Path -LiteralPath $HookScript)) {
-    $errors += "Missing hook script: $HookScript"
   }
 
   if (!(Test-Path -LiteralPath $BridgeExe)) {
@@ -236,14 +270,14 @@ function Start-Interactive {
   Write-Host "Hooks file: $HooksPath"
   Write-Host "Hook command: $HookCommand"
 
-  $node = Get-Command node -ErrorAction SilentlyContinue
-  if (!$node) {
-    Write-Host "ERROR: node was not found in PATH."
-    exit 1
-  }
-
-  $choice = Read-Host "Choose action: [I]nstall/update, [C]heck, [U]ninstall, [Q]uit"
+  $choice = Read-Host "Choose action: [I]nstall/update, [C]heck, [U]ninstall hooks, uninstall [A]ll runtime, [Q]uit"
   switch -Regex ($choice) {
+    "^[Aa]" {
+      Stop-BridgeProcess
+      Uninstall-Hooks
+      Remove-RuntimeData
+      return
+    }
     "^[Uu]" { Uninstall-Hooks; return }
     "^[Cc]" {
       if (Check-Setup) { exit 0 } else { exit 1 }
@@ -267,16 +301,18 @@ if ($Interactive) {
 }
 
 if ($Install) {
-  if (!(Get-Command node -ErrorAction SilentlyContinue)) {
-    Write-Host "ERROR: node was not found in PATH."
-    exit 1
-  }
   Install-Hooks
   exit 0
 }
 
 if ($Uninstall) {
+  if ($StopBridge) {
+    Stop-BridgeProcess
+  }
   Uninstall-Hooks
+  if ($PurgeData) {
+    Remove-RuntimeData
+  }
   exit 0
 }
 
