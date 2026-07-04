@@ -72,22 +72,15 @@ attention
 unknown
 ```
 
-### Supported Now
-
-| Agent / Tool | Status | Notes |
-| --- | --- | --- |
-| Codex | Supported | First backend. Uses Codex Hooks and writes `data/codex-status.json`. |
-
-### Planned Agent Backends
-
-| Agent / Tool | Planned Integration |
-| --- | --- |
-| Claude Code | Hook/event adapter for Claude Code style workflows. |
-| Gemini CLI | Local event/status adapter when hook or command lifecycle signals are available. |
-| OpenCode | Hook adapter for OpenCode-style agent sessions. |
-| Cursor | Local workflow/status adapter if a reliable event source is available. |
-| Aider | Command/session status adapter for terminal-based coding workflows. |
-| Custom Agent | Generic file/stdout/webhook adapter for tools that can emit status events. |
+| Agent / Tool | Support Level | Planned Adapter | Current Notes |
+| --- | --- | --- | --- |
+| Codex | Supported | Codex Hooks | First implemented backend. Writes `data/codex-status.json` and drives the bridge today. |
+| Claude Code | Planned | Hook / lifecycle event adapter | Target backend for Claude Code style hook workflows. |
+| Gemini CLI | Planned | Local event / command lifecycle adapter | Depends on available hook or lifecycle signals. |
+| OpenCode | Planned | Hook adapter | Intended for OpenCode-style agent sessions. |
+| Cursor | Researching | Local workflow/status adapter | Requires a reliable local event source. |
+| Aider | Researching | Terminal session adapter | Could map command/session state into the shared protocol. |
+| Custom Agent | Planned | File / stdout / webhook adapter | Any tool that can emit `idle`, `working`, `attention`, or `unknown` can integrate. |
 
 The long-term goal is not to be tied to one agent runtime. Codex is simply the first implemented backend.
 
