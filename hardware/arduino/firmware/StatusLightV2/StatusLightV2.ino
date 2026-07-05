@@ -10,6 +10,7 @@
 #define COLOR_ORDER GRB
 #define INPUT_MAX 48
 #define FRAME_MS 25
+#define WAITING_FLASH_MS 800
 
 enum AgentState : uint8_t {
   STATE_IDLE,
@@ -20,6 +21,14 @@ enum AgentState : uint8_t {
   STATE_ERROR,
   STATE_UNKNOWN
 };
+
+const CRGB IDLE_COLOR = CRGB(0, 220, 90);
+const CRGB THINKING_COLOR = CRGB(30, 110, 255);
+const CRGB WORKING_COLOR = CRGB(255, 140, 0);
+const CRGB WAITING_COLOR = CRGB(150, 45, 255);
+const CRGB SUCCESS_COLOR = CRGB(0, 80, 55);
+const CRGB ERROR_COLOR = CRGB(255, 0, 0);
+const CRGB UNKNOWN_COLOR = CRGB(45, 40, 140);
 
 CRGB leds[NUM_LEDS];
 
@@ -35,14 +44,20 @@ AgentState parseState(char *value);
 void normalizeInput(char *value);
 void setState(AgentState nextState);
 void renderState(uint32_t now);
-void renderIdle();
+void renderIdle(uint32_t now);
 void renderThinking(uint32_t now);
 void renderWorking(uint32_t now);
-void renderWaiting();
+void renderWaiting(uint32_t now);
 void renderSuccess(uint32_t now);
 void renderError(uint32_t now);
-void renderUnknown();
+void renderUnknown(uint32_t now);
+void fillRing(const CRGB &color, uint8_t scale);
+void drawChase(uint32_t now, const CRGB &color, uint8_t count, uint16_t speedMs);
+void drawOppositeDots(uint32_t now, const CRGB &color, uint16_t speedMs);
+void drawSingleScan(uint32_t now, const CRGB &color, uint16_t speedMs);
+void drawWaitingCue(bool active);
 void setPixelWrapped(int index, const CRGB &color);
+CRGB scaledColor(CRGB color, uint8_t scale);
 
 void setup() {
   Serial.begin(SERIAL_BAUD);
@@ -53,7 +68,7 @@ void setup() {
   FastLED.setMaxPowerInVoltsAndMilliamps(5, 1500);
 
   stateStartedAt = millis();
-  renderUnknown();
+  renderUnknown(stateStartedAt);
   FastLED.show();
 }
 
@@ -166,7 +181,7 @@ void setState(AgentState nextState) {
 void renderState(uint32_t now) {
   switch (currentState) {
     case STATE_IDLE:
-      renderIdle();
+      renderIdle(now);
       break;
     case STATE_THINKING:
       renderThinking(now);
@@ -175,7 +190,7 @@ void renderState(uint32_t now) {
       renderWorking(now);
       break;
     case STATE_WAITING:
-      renderWaiting();
+      renderWaiting(now);
       break;
     case STATE_SUCCESS:
       renderSuccess(now);
@@ -184,58 +199,89 @@ void renderState(uint32_t now) {
       renderError(now);
       break;
     default:
-      renderUnknown();
+      renderUnknown(now);
       break;
   }
 }
 
-void renderIdle() {
-  uint8_t level = beatsin8(10, 35, 110);
-  fill_solid(leds, NUM_LEDS, CRGB(0, level, 0));
+void renderIdle(uint32_t now) {
+  fillRing(IDLE_COLOR, 36);
+  drawSingleScan(now, IDLE_COLOR, 180);
 }
 
 void renderThinking(uint32_t now) {
-  fill_solid(leds, NUM_LEDS, CRGB(0, 0, 18));
-
-  int head = (now / 90) % NUM_LEDS;
-  setPixelWrapped(head, CRGB(30, 120, 255));
-  setPixelWrapped(head - 1, CRGB(0, 55, 170));
-  setPixelWrapped(head - 2, CRGB(0, 20, 90));
+  fillRing(THINKING_COLOR, 22);
+  drawOppositeDots(now, THINKING_COLOR, 120);
 }
 
 void renderWorking(uint32_t now) {
-  fill_solid(leds, NUM_LEDS, CRGB(32, 20, 0));
-
-  int head = (now / 55) % NUM_LEDS;
-  for (uint8_t i = 0; i < 5; i++) {
-    uint8_t fade = 255 - (i * 45);
-    CRGB color = CRGB(255, 170, 0);
-    color.nscale8_video(fade);
-    setPixelWrapped(head - i, color);
-  }
+  fillRing(WORKING_COLOR, 24);
+  drawChase(now, WORKING_COLOR, 4, 58);
 }
 
-void renderWaiting() {
-  uint8_t level = beatsin8(18, 20, 150);
-  fill_solid(leds, NUM_LEDS, CRGB(level, 0, level));
+void renderWaiting(uint32_t now) {
+  fillRing(WAITING_COLOR, 42);
+
+  uint32_t age = now - stateStartedAt;
+  bool active = (age % WAITING_FLASH_MS) < 280;
+  drawWaitingCue(active);
 }
 
 void renderSuccess(uint32_t now) {
-  fill_solid(leds, NUM_LEDS, CRGB(0, 120, 20));
+  fillRing(SUCCESS_COLOR, 110);
 
-  int offset = (now / 70) % NUM_LEDS;
-  setPixelWrapped(offset, CRGB::White);
-  setPixelWrapped(offset + 8, CRGB(120, 255, 120));
-  setPixelWrapped(offset + 16, CRGB(120, 255, 120));
+  uint32_t age = now - stateStartedAt;
+  if (age < 1400) {
+    drawSingleScan(now, SUCCESS_COLOR, 55);
+  }
 }
 
 void renderError(uint32_t now) {
-  bool on = ((now - stateStartedAt) / 180) % 2 == 0;
-  fill_solid(leds, NUM_LEDS, on ? CRGB(255, 0, 0) : CRGB(20, 0, 0));
+  uint32_t age = now - stateStartedAt;
+  uint16_t flashWindow = age % 900;
+  bool flash = flashWindow < 120 || (flashWindow > 210 && flashWindow < 330) || (flashWindow > 420 && flashWindow < 540);
+
+  fillRing(ERROR_COLOR, flash ? 185 : 25);
 }
 
-void renderUnknown() {
-  fill_solid(leds, NUM_LEDS, CRGB(0, 0, 70));
+void renderUnknown(uint32_t now) {
+  fillRing(UNKNOWN_COLOR, 32);
+  drawSingleScan(now, UNKNOWN_COLOR, 145);
+}
+
+void fillRing(const CRGB &color, uint8_t scale) {
+  fill_solid(leds, NUM_LEDS, scaledColor(color, scale));
+}
+
+void drawChase(uint32_t now, const CRGB &color, uint8_t count, uint16_t speedMs) {
+  int head = (now / speedMs) % NUM_LEDS;
+  for (uint8_t i = 0; i < count; i++) {
+    int fade = 255 - (i * 48);
+    if (fade < 70) {
+      fade = 70;
+    }
+    setPixelWrapped(head - i, scaledColor(color, (uint8_t)fade));
+  }
+}
+
+void drawOppositeDots(uint32_t now, const CRGB &color, uint16_t speedMs) {
+  int head = (now / speedMs) % NUM_LEDS;
+  setPixelWrapped(head, scaledColor(color, 210));
+  setPixelWrapped(head + (NUM_LEDS / 2), scaledColor(color, 170));
+}
+
+void drawSingleScan(uint32_t now, const CRGB &color, uint16_t speedMs) {
+  int head = (now / speedMs) % NUM_LEDS;
+  setPixelWrapped(head, scaledColor(color, 190));
+}
+
+void drawWaitingCue(bool active) {
+  CRGB center = active ? CRGB::White : scaledColor(WAITING_COLOR, 150);
+  CRGB side = active ? scaledColor(WAITING_COLOR, 220) : scaledColor(WAITING_COLOR, 110);
+
+  setPixelWrapped(0, center);
+  setPixelWrapped(1, side);
+  setPixelWrapped(23, side);
 }
 
 void setPixelWrapped(int index, const CRGB &color) {
@@ -244,4 +290,9 @@ void setPixelWrapped(int index, const CRGB &color) {
   }
 
   leds[index % NUM_LEDS] = color;
+}
+
+CRGB scaledColor(CRGB color, uint8_t scale) {
+  color.nscale8_video(scale);
+  return color;
 }

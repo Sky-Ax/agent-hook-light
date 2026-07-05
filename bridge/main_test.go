@@ -23,11 +23,11 @@ func TestRunHookWritesStatusAndRedactedLog(t *testing.T) {
 
 	var status statusFile
 	readJSONFile(t, statusPath, &status)
-	if status.State != "working" {
-		t.Fatalf("state = %q, want working", status.State)
+	if status.State != "thinking" {
+		t.Fatalf("state = %q, want thinking", status.State)
 	}
-	if status.Sessions["s1"].State != "working" {
-		t.Fatalf("session state = %q, want working", status.Sessions["s1"].State)
+	if status.Sessions["s1"].State != "thinking" {
+		t.Fatalf("session state = %q, want thinking", status.Sessions["s1"].State)
 	}
 
 	logContent, err := os.ReadFile(logPath)
@@ -39,7 +39,7 @@ func TestRunHookWritesStatusAndRedactedLog(t *testing.T) {
 	}
 }
 
-func TestRunHookMapsParseErrorToAttention(t *testing.T) {
+func TestRunHookMapsParseErrorToError(t *testing.T) {
 	dir := t.TempDir()
 	statusPath := filepath.Join(dir, "codex-status.json")
 	logPath := filepath.Join(dir, "codex-hook-log.jsonl")
@@ -51,11 +51,97 @@ func TestRunHookMapsParseErrorToAttention(t *testing.T) {
 
 	var status statusFile
 	readJSONFile(t, statusPath, &status)
-	if status.State != "attention" {
-		t.Fatalf("state = %q, want attention", status.State)
+	if status.State != "error" {
+		t.Fatalf("state = %q, want error", status.State)
 	}
 	if status.Color != "red" {
 		t.Fatalf("color = %q, want red", status.Color)
+	}
+}
+
+func TestMapHookStatusUsesExpandedStatusVocabulary(t *testing.T) {
+	tests := []struct {
+		name      string
+		event     codexEvent
+		wantState string
+		wantColor string
+	}{
+		{
+			name:      "prompt submit maps to thinking",
+			event:     codexEvent{HookEventName: "UserPromptSubmit"},
+			wantState: "thinking",
+			wantColor: "blue",
+		},
+		{
+			name:      "pre tool use maps to working",
+			event:     codexEvent{HookEventName: "PreToolUse"},
+			wantState: "working",
+			wantColor: "yellow",
+		},
+		{
+			name:      "post tool use maps back to thinking",
+			event:     codexEvent{HookEventName: "PostToolUse"},
+			wantState: "thinking",
+			wantColor: "blue",
+		},
+		{
+			name:      "permission request maps to waiting",
+			event:     codexEvent{HookEventName: "PermissionRequest"},
+			wantState: "waiting",
+			wantColor: "purple",
+		},
+		{
+			name:      "stop maps to success",
+			event:     codexEvent{HookEventName: "Stop"},
+			wantState: "success",
+			wantColor: "green",
+		},
+		{
+			name:      "parse error maps to error",
+			event:     codexEvent{HookEventName: "ParseError"},
+			wantState: "error",
+			wantColor: "red",
+		},
+		{
+			name:      "unknown event maps to unknown",
+			event:     codexEvent{HookEventName: "UnexpectedEvent"},
+			wantState: "unknown",
+			wantColor: "blue",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := mapHookStatus(tt.event)
+			if got.State != tt.wantState {
+				t.Fatalf("state = %q, want %q", got.State, tt.wantState)
+			}
+			if got.Color != tt.wantColor {
+				t.Fatalf("color = %q, want %q", got.Color, tt.wantColor)
+			}
+		})
+	}
+}
+
+func TestNormalizeStateAllowsExpandedStatusVocabulary(t *testing.T) {
+	tests := map[string]string{
+		"idle":      "idle",
+		"thinking":  "thinking",
+		"working":   "working",
+		"waiting":   "waiting",
+		"success":   "success",
+		"error":     "error",
+		"unknown":   "unknown",
+		"attention": "error",
+		" done ":    "success",
+		"FAILED":    "error",
+		"nonsense":  "unknown",
+	}
+
+	for input, want := range tests {
+		if got := normalizeState(input); got != want {
+			t.Fatalf("normalizeState(%q) = %q, want %q", input, got, want)
+		}
 	}
 }
 

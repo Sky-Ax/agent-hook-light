@@ -6,6 +6,7 @@ data/*.log
 data/*.log.*
 tools/
 docs/
+bin/*.exe~
 
 # Local editor metadata
 .idea/

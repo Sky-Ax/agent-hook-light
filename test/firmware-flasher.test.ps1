@@ -81,6 +81,8 @@ Assert-Equal $firmwareRoot (Join-Path $Root "hardware\arduino\firmware") "Firmwa
 
 Assert-Equal (Convert-FirmwareIdToName -Id "StatusLightBaseV1") "Status Light Base V1" "Status firmware display names should include the version."
 Assert-Equal (Convert-FirmwareIdToName -Id "StatusLightV2") "Status Light V2" "V2 status firmware display name should include the version."
+Assert-Equal (Convert-FirmwareIdToName -Id "StatusLightV3") "Status Light V3" "V3 status firmware display name should include the version."
+Assert-Equal (Convert-FirmwareIdToName -Id "StatusLightShowcase") "Status Light Showcase" "Showcase firmware display name should be human-readable."
 Assert-Equal (Convert-FirmwareIdToName -Id "RainbowLight") "Rainbow Light" "Firmware display names should be readable for new firmware ids."
 
 $firmwares = @(Get-FirmwareDefinitions -RootDir $Root)
@@ -112,8 +114,49 @@ foreach ($stateName in @("idle", "thinking", "working", "waiting", "success", "e
 foreach ($aliasName in @("submitted", "tool_running", "waiting_user", "waiting_permission", "done", "complete", "failed", "failure", "attention")) {
   Assert-True ($statusV2Source -like "*`"$aliasName`"*") "V2 firmware should support the '$aliasName' compatibility alias."
 }
+foreach ($simpleHelper in @("IDLE_COLOR", "SUCCESS_COLOR", "WAITING_COLOR", "drawChase", "drawSingleScan", "drawWaitingCue")) {
+  Assert-True ($statusV2Source -like "*$simpleHelper*") "V2 firmware should include the simple ring helper '$simpleHelper'."
+}
+foreach ($colorLiteral in @("CRGB(0, 220, 90)", "CRGB(0, 80, 55)", "CRGB(30, 110, 255)", "CRGB(255, 140, 0)", "CRGB(150, 45, 255)", "CRGB(45, 40, 140)")) {
+  Assert-True ($statusV2Source -like "*$colorLiteral*") "V2 firmware should include the simplified color $colorLiteral."
+}
+foreach ($complexPattern in @("ENTER_PULSE_MS", "drawStatusAckPulse", "qadd8", "addPixelWrapped")) {
+  Assert-True ($statusV2Source -cnotmatch [regex]::Escape($complexPattern)) "V2 firmware should avoid the complex additive effect '$complexPattern'."
+}
+Assert-True ($statusV2Source -cnotmatch '\bbeatsin8\b') "V2 firmware should avoid breathing effects in the interaction-focused profile."
 Assert-True ($statusV2Source -cnotmatch '\bString\b') "V2 firmware should avoid Arduino String allocations in the serial parser."
 Assert-True ($statusV2Source -cnotmatch '\bdelay\s*\(') "V2 firmware should keep the serial/render loop non-blocking."
+
+$statusV3Firmware = Resolve-FirmwareSelection -Firmwares $firmwares -Choice "StatusLightV3"
+Assert-Equal $statusV3Firmware.Id "StatusLightV3" "V3 status firmware should be available."
+Assert-Equal $statusV3Firmware.Name "Status Light V3" "V3 status firmware display name should include the version."
+Assert-Equal $statusV3Firmware.RelativeSketchPath "hardware\arduino\firmware\StatusLightV3\StatusLightV3.ino" "V3 status firmware sketch path should use a versioned standard Arduino sketch folder."
+Assert-True (Test-Path -LiteralPath $statusV3Firmware.SketchPath) "V3 status firmware sketch path should exist on disk."
+$statusV3Source = Get-Content -Raw -LiteralPath $statusV3Firmware.SketchPath
+foreach ($stateName in @("idle", "thinking", "working", "waiting", "success", "error", "unknown")) {
+  Assert-True ($statusV3Source -like "*`"$stateName`"*") "V3 firmware should support the '$stateName' state."
+}
+foreach ($aliasName in @("submitted", "tool_running", "waiting_user", "waiting_permission", "done", "complete", "failed", "failure", "attention")) {
+  Assert-True ($statusV3Source -like "*`"$aliasName`"*") "V3 firmware should support the '$aliasName' compatibility alias."
+}
+foreach ($robotHelper in @("drawBotEyes", "drawEye", "drawSmile", "drawTransitionSpark", "renderIdleBot", "renderWaitingBot")) {
+  Assert-True ($statusV3Source -like "*$robotHelper*") "V3 firmware should include the robot-style helper '$robotHelper'."
+}
+Assert-True ($statusV3Source -cnotmatch '\bString\b') "V3 firmware should avoid Arduino String allocations in the serial parser."
+Assert-True ($statusV3Source -cnotmatch '\bdelay\s*\(') "V3 firmware should keep the serial/render loop non-blocking."
+
+$showcaseFirmware = Resolve-FirmwareSelection -Firmwares $firmwares -Choice "StatusLightShowcase"
+Assert-Equal $showcaseFirmware.Id "StatusLightShowcase" "Status light showcase firmware should be available."
+Assert-Equal $showcaseFirmware.Name "Status Light Showcase" "Showcase firmware display name should be human-readable."
+Assert-Equal $showcaseFirmware.RelativeSketchPath "hardware\arduino\firmware\StatusLightShowcase\StatusLightShowcase.ino" "Showcase firmware sketch path should use a standard Arduino sketch folder."
+Assert-True (Test-Path -LiteralPath $showcaseFirmware.SketchPath) "Showcase firmware sketch path should exist on disk."
+$showcaseSource = Get-Content -Raw -LiteralPath $showcaseFirmware.SketchPath
+foreach ($stateName in @("idle", "thinking", "working", "waiting", "success", "error", "unknown")) {
+  Assert-True ($showcaseSource -like "*`"$stateName`"*") "Showcase firmware should cycle the '$stateName' light effect."
+}
+Assert-True ($showcaseSource -like "*SHOWCASE_STEP_MS*") "Showcase firmware should use a named display duration."
+Assert-True ($showcaseSource -like "*drawBotEyes*") "Showcase firmware should demonstrate the robot-style V3 effects."
+Assert-True ($showcaseSource -cnotmatch '\bdelay\s*\(') "Showcase firmware should keep the animation loop non-blocking."
 
 $selectedFirmwareByNumber = Resolve-FirmwareSelection -Firmwares $firmwares -Choice "1"
 Assert-Equal $selectedFirmwareByNumber.Id "RainbowLight" "Numeric firmware selection should use one-based indexes."

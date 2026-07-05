@@ -219,8 +219,18 @@ func readStateIfChanged(path string, lastMod time.Time) (string, time.Time, erro
 
 func normalizeState(value string) string {
 	switch strings.ToLower(strings.TrimSpace(value)) {
-	case "idle", "working", "attention", "unknown":
+	case "idle", "thinking", "working", "waiting", "success", "error", "unknown":
 		return strings.ToLower(strings.TrimSpace(value))
+	case "submitted":
+		return "thinking"
+	case "tool_running":
+		return "working"
+	case "waiting_user", "waiting_permission":
+		return "waiting"
+	case "done", "complete":
+		return "success"
+	case "attention", "failed", "failure":
+		return "error"
 	default:
 		return "unknown"
 	}

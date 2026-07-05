@@ -4,7 +4,9 @@ This folder contains the ESP32-C3 + WS2812B firmware for Agent Hook Light.
 
 Firmware sketches live under `firmware`:
 
-- `firmware/StatusLightV2/StatusLightV2.ino`: richer animated status firmware for the expanded state protocol; recommended for new installs
+- `firmware/StatusLightV3/StatusLightV3.ino`: robot-style animated status firmware with expressive eyes and richer state motion; recommended for new installs
+- `firmware/StatusLightV2/StatusLightV2.ino`: simplified 24-LED ring status firmware with clear colors, small motion, and a stronger waiting prompt
+- `firmware/StatusLightShowcase/StatusLightShowcase.ino`: standalone showcase firmware that cycles every V3 status light effect
 - `firmware/StatusLightBaseV1/StatusLightBaseV1.ino`: base compatibility firmware for the current Go bridge
 - `firmware/RainbowLight/RainbowLight.ino`: standalone rainbow light demo firmware
 
@@ -35,7 +37,7 @@ Default color mapping:
 | `attention` | Red |
 | `unknown` | Blue |
 
-The V2 firmware accepts the expanded status vocabulary:
+The V2 and V3 firmware accept the expanded status vocabulary:
 
 ```text
 idle
@@ -47,7 +49,7 @@ error
 unknown
 ```
 
-Compatibility aliases accepted by V2:
+Compatibility aliases accepted by V2 and V3:
 
 | Alias | V2 state |
 | --- | --- |
@@ -61,17 +63,31 @@ Compatibility aliases accepted by V2:
 | `failure` | `error` |
 | `attention` | `error` |
 
-V2 default effects:
+V3 default effects:
 
 | State | Effect |
 | --- | --- |
-| `idle` | Green breathing |
-| `thinking` | Blue moving pulse |
-| `working` | Yellow/orange chase |
-| `waiting` | Purple breathing |
-| `success` | Green with bright sweep |
-| `error` | Red flash |
-| `unknown` | Solid blue |
+| `idle` | Teal robot eyes with occasional blink and glance |
+| `thinking` | Blue eyes with orbiting thought dots |
+| `working` | Amber motor chase with busy eyes |
+| `waiting` | Purple attentive eyes with a white prompt ping |
+| `success` | Green happy eyes with white/green celebration sweep |
+| `error` | Red narrow eyes with jitter and alert flash |
+| `unknown` | Blue/purple asymmetrical confused eyes |
+
+V2 default effects:
+
+| State | Color | Effect |
+| --- | --- | --- |
+| `idle` | Green `RGB(0, 220, 90)` | Low full ring with one slow scanning dot |
+| `thinking` | Blue `RGB(30, 110, 255)` | Low full ring with two opposite moving dots |
+| `working` | Amber `RGB(255, 140, 0)` | Low full ring with a four-dot chase |
+| `waiting` | Purple `RGB(150, 45, 255)` plus white | Purple base with three bright white/purple prompt LEDs |
+| `success` | Deep teal `RGB(0, 80, 55)` | Deep teal full ring with a short scan |
+| `error` | Red `RGB(255, 0, 0)` | Red triple flash |
+| `unknown` | Blue/purple `RGB(45, 40, 140)` | Low full ring with one slow scanning dot |
+
+`StatusLightShowcase` does not read status from serial. It automatically cycles through `idle`, `thinking`, `working`, `waiting`, `success`, `error`, and `unknown`, holding each V3 effect for about 3.5 seconds. Use it when you want to preview every status color and animation without running the Go bridge.
 
 The included flasher enables USB CDC on boot automatically so the firmware reads status lines from the selected COM port. When flashing from Arduino IDE, enable USB CDC on boot for ESP32-C3 serial access.
 
@@ -83,7 +99,7 @@ From the repository root, run:
 .\hardware\arduino\flash-firmware.cmd
 ```
 
-The flasher downloads a local Arduino CLI into `tools/arduino-cli` if needed, installs ESP32 board support and FastLED, asks which firmware to flash, asks for the ESP32-C3 COM port, then compiles and uploads the firmware. For normal Agent Hook Light use, choose `Status Light V2`.
+The flasher downloads a local Arduino CLI into `tools/arduino-cli` if needed, installs ESP32 board support and FastLED, asks which firmware to flash, asks for the ESP32-C3 COM port, then compiles and uploads the firmware. For normal Agent Hook Light use, choose `Status Light V3`. To preview every status effect, choose `Status Light Showcase`.
 
 Each firmware uses a standard Arduino sketch folder. The flasher lists sketch folders under `firmware` first so you can choose which firmware to upload.
 

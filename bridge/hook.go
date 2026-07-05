@@ -157,17 +157,21 @@ func mapHookStatus(event codexEvent) hookStatus {
 
 	switch name {
 	case "ParseError":
-		return hookStatus{State: "attention", Color: "red", Reason: "parse_error"}
+		return hookStatus{State: "error", Color: "red", Reason: "parse_error"}
 	case "EmptyInput":
 		return hookStatus{State: "idle", Color: "gray", Reason: "empty_input"}
 	case "PermissionRequest":
-		return hookStatus{State: "attention", Color: "red", Reason: "permission_required"}
+		return hookStatus{State: "waiting", Color: "purple", Reason: "permission_required"}
 	case "Stop":
-		return hookStatus{State: "idle", Color: "green", Reason: "stopped"}
-	case "UserPromptSubmit", "PreToolUse", "PostToolUse", "SubagentStop":
+		return hookStatus{State: "success", Color: "green", Reason: "stopped"}
+	case "UserPromptSubmit":
+		return hookStatus{State: "thinking", Color: "blue", Reason: name}
+	case "PreToolUse":
 		return hookStatus{State: "working", Color: "yellow", Reason: name}
+	case "PostToolUse", "SubagentStop":
+		return hookStatus{State: "thinking", Color: "blue", Reason: name}
 	default:
-		return hookStatus{State: "working", Color: "yellow", Reason: name}
+		return hookStatus{State: "unknown", Color: "blue", Reason: name}
 	}
 }
 
