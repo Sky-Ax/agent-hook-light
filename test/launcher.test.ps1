@@ -128,6 +128,11 @@ exit 8
   Assert-True ($helpText -like "*Space*") "Menu help should mention Space confirmation."
   Assert-True ($helpText -like "*Enter*") "Menu help should mention Enter confirmation."
   Assert-True ($helpText -like "*Esc*") "Menu help should mention Esc cancellation."
+
+  $launcherSource = Get-Content -LiteralPath $LauncherScript -Raw -Encoding UTF8
+  Assert-True (
+    $launcherSource -match '(?s)Start serial bridge now\?".*?-DefaultYes\s+\$true'
+  ) "Start bridge confirmation should default to Yes to reduce repeat-start keystrokes."
 } finally {
   Remove-Item -LiteralPath $Temp -Recurse -Force -ErrorAction SilentlyContinue
 }

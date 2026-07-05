@@ -440,6 +440,7 @@ function Invoke-AgentStatusLightLauncher {
 
   if (!(Confirm-LauncherPrompt `
     -Prompt "🚀 Step 2/3  Start serial bridge now?" `
+    -DefaultYes $true `
     -YesLabel "Yes, start bridge" `
     -NoLabel "No, exit")) {
     Write-LauncherWarning "Cancelled."
