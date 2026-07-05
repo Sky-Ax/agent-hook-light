@@ -77,6 +77,27 @@ func TestSendStateWithRecoveryReturnsActionableReconnectFailure(t *testing.T) {
 	}
 }
 
+func TestSendStateWithRecoveryExplainsBusyAfterTimedOutWrite(t *testing.T) {
+	oldPort := &scriptedSerialPort{writeErrs: []error{errors.New("serial write timed out after 3s")}}
+	cfg := bridgeConfig{
+		portName:     "COM5",
+		baudRate:     115200,
+		writeTimeout: time.Second,
+		openSerial: func(name string, baudRate int) (serial.Port, error) {
+			return nil, errors.New("Serial port busy")
+		},
+	}
+	port := serial.Port(oldPort)
+
+	err := sendStateWithRecovery(&port, cfg, "working")
+	if err == nil {
+		t.Fatal("sendStateWithRecovery returned nil, want reconnect failure")
+	}
+	if !strings.Contains(err.Error(), "Windows may still be releasing the previous serial handle") {
+		t.Fatalf("error %q should explain the likely stale Windows serial handle after a timeout", err)
+	}
+}
+
 func TestWriteWithTimeoutPurgesAndClosesPortBeforeReturning(t *testing.T) {
 	port := newBlockingSerialPort()
 
