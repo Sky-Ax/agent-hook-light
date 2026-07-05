@@ -252,6 +252,7 @@ func sendStateWithRecovery(port *serial.Port, cfg bridgeConfig, state string) er
 		if openSerial == nil {
 			openSerial = openSerialWithRetry
 		}
+		timedOutWrite := isSerialWriteTimeout(err)
 
 		logf("serial write failed on %s: %v", cfg.portName, err)
 		logf("serial connection may be lost; reconnecting %s...", cfg.portName)
@@ -261,7 +262,11 @@ func sendStateWithRecovery(port *serial.Port, cfg bridgeConfig, state string) er
 
 		reopened, openErr := openSerial(cfg.portName, cfg.baudRate)
 		if openErr != nil {
-			return fmt.Errorf("serial connection was lost on %s while sending %q, and reconnect failed: %w. Unplug/replug the ESP32, close other serial tools, then run start.cmd again to choose the correct COM port", cfg.portName, state, openErr)
+			advice := "Unplug/replug the ESP32, close other serial tools, then run start.cmd again to choose the correct COM port"
+			if timedOutWrite {
+				advice = "Windows may still be releasing the previous serial handle after the timed-out write. Wait a few seconds, unplug/replug the ESP32, close other serial tools, then run start.cmd again to choose the correct COM port"
+			}
+			return fmt.Errorf("serial connection was lost on %s while sending %q, and reconnect failed: %w. %s", cfg.portName, state, openErr, advice)
 		}
 
 		*port = reopened
@@ -275,6 +280,10 @@ func sendStateWithRecovery(port *serial.Port, cfg bridgeConfig, state string) er
 	}
 
 	return nil
+}
+
+func isSerialWriteTimeout(err error) bool {
+	return strings.Contains(strings.ToLower(err.Error()), "serial write timed out")
 }
 
 func waitForDeviceSerialStartup(cfg bridgeConfig) {
