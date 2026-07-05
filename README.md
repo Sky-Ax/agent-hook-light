@@ -143,29 +143,15 @@ For ESP32-C3 USB serial, enable **USB CDC On Boot** when uploading the Arduino s
 
 ## Quick Start
 
-Install or update the Codex hook:
+Launch the beginner setup and bridge starter:
 
 ```powershell
-.\install.cmd
+.\start.cmd
 ```
 
-Check the setup:
+The launcher checks the Codex hook setup first. If the hook is missing or incomplete, it asks before installing it. After setup passes, it uses a keyboard menu to ask whether to start the bridge, lists available COM ports, requires you to select the ESP32 serial port, saves that choice, and starts the bridge with the selected port.
 
-```powershell
-.\check.cmd
-```
-
-Start the serial bridge:
-
-```powershell
-.\bin\start-bridge.cmd -port COM4
-```
-
-Build the Go executable after changing `bridge/*.go`:
-
-```powershell
-.\bin\build-bridge.cmd
-```
+In the launcher, use the arrow keys to choose, Space or Enter to confirm, and Esc to cancel.
 
 Uninstall hooks only:
 
@@ -205,11 +191,11 @@ Optional environment variables:
 ## Project Structure
 
 ```text
+start.cmd               Double-click setup and bridge launcher
 bin/
+  agent-status-light.ps1 Internal launcher logic
   codex-hook.cmd       Codex hook command wrapper
   ai-hook-bridge.exe   Built Go executable
-  build-bridge.cmd     Build the Go executable
-  start-bridge.cmd     Start the serial bridge
   install.ps1          Hook installer/checker
 bridge/
   main.go              CLI entrypoint and mode dispatch
@@ -223,8 +209,7 @@ data/
   .gitkeep             Runtime data directory placeholder
 test/
   install.test.ps1
-install.cmd            Interactive installer
-check.cmd              Setup checker
+  launcher.test.ps1
 ```
 
 Runtime status and logs are written under `data/` and ignored by Git.
@@ -235,8 +220,16 @@ Run tests:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\test\install.test.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\test\launcher.test.ps1
 cd bridge
 go test ./...
+```
+
+Build the Go executable after changing `bridge/*.go`:
+
+```powershell
+cd bridge
+go build -o ..\bin\ai-hook-bridge.exe .
 ```
 
 ## Design Notes
