@@ -5,6 +5,7 @@ data/*.jsonl.*
 data/*.log
 data/*.log.*
 tools/
+docs/
 
 # Local editor metadata
 .idea/
