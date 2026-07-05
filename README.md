@@ -159,7 +159,7 @@ Flash the ESP32-C3 firmware:
 .\hardware\arduino\flash-firmware.cmd
 ```
 
-The firmware flasher prepares Arduino CLI locally under `tools/`, installs the ESP32 board package and pinned `FastLED@3.9.4`, lists firmware sketches from `hardware\arduino\SerialStatusLight`, asks for the ESP32 serial port, then compiles and uploads the selected firmware. If automatic download fails, it prints manual Arduino CLI or ESP32 board package instructions.
+The firmware flasher prepares Arduino CLI locally under `tools/`, installs the ESP32 board package and pinned `FastLED@3.9.4`, lists firmware sketch folders from `hardware\arduino\SerialStatusLight`, asks for the ESP32 serial port, then directly compiles and uploads the selected firmware. If automatic download fails, it prints manual Arduino CLI or ESP32 board package instructions.
 
 Uninstall hooks only:
 
@@ -220,8 +220,10 @@ hardware/
     flash-firmware.cmd   Double-click ESP32-C3 firmware flasher
     flash-firmware.ps1   Firmware flasher implementation
     SerialStatusLight/
-      SerialStatusLight.ino ESP32-C3 + WS2812B serial status firmware
-      RainbowLight.ino      Standalone rainbow light demo firmware
+      SerialStatusLight/
+        SerialStatusLight.ino ESP32-C3 + WS2812B serial status firmware
+      RainbowLight/
+        RainbowLight.ino      Standalone rainbow light demo firmware
 test/
   install.test.ps1
   launcher.test.ps1

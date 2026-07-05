@@ -102,6 +102,25 @@ exit 8
   Assert-Equal ($bridgeErrorExit -is [int]) $true "Console helper should return a scalar integer exit code when stderr is written."
   Assert-Equal $bridgeErrorExit 8 "Console helper should preserve the child process exit code when stderr is written."
 
+  $mockRoot = Join-Path $Temp "mock-root"
+  $mockBin = Join-Path $mockRoot "bin"
+  $mockBridgeSource = Join-Path $mockRoot "bridge"
+  New-Item -ItemType Directory -Path $mockBin | Out-Null
+  New-Item -ItemType Directory -Path $mockBridgeSource | Out-Null
+  $mockBridgeExe = Join-Path $mockBin "ai-hook-bridge.exe"
+  $mockGo = Join-Path $Temp "mock-go.cmd"
+  Set-Content -LiteralPath $mockGo -Encoding ASCII -Value @'
+@echo off
+if "%1"=="build" if "%2"=="-o" (
+  echo mock bridge exe>"%3"
+  exit /b 0
+)
+exit /b 9
+'@
+  Assert-Equal (Get-BridgeSourceDir -RootDir $mockRoot) $mockBridgeSource "Bridge source directory should live under the project root."
+  Ensure-BridgeExecutable -RootDir $mockRoot -BridgeExe $mockBridgeExe -GoExe $mockGo
+  Assert-True (Test-Path -LiteralPath $mockBridgeExe) "Missing bridge executable should be rebuilt automatically."
+
   $ports = Get-SerialPortsFromOutput -Output @("No serial ports found.", "COM3", "COM7", "not-a-port")
   Assert-Equal $ports.Count 2 "Only COM ports should be kept."
   Assert-Equal $ports[0] "COM3" "First COM port should be kept."

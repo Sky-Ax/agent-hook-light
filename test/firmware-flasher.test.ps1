@@ -33,6 +33,9 @@ Assert-Equal $resolvedRoot $Root "Arduino script directory should resolve to the
 $cliPath = Get-ArduinoCliPath -RootDir $Root
 Assert-Equal $cliPath (Join-Path $Root "tools\arduino-cli\arduino-cli.exe") "Arduino CLI should live under the local tools directory."
 
+$boardFqbn = Get-BoardFqbn
+Assert-Equal $boardFqbn "esp32:esp32:esp32c3:CDCOnBoot=cdc" "Firmware must enable USB CDC on boot so Serial reads from the selected COM port."
+
 $arduinoDataDir = Get-ArduinoDataDir
 Assert-Equal $arduinoDataDir (Join-Path $env:LOCALAPPDATA "Arduino15") "Arduino CLI data directory should match the Windows Arduino15 location."
 
@@ -84,14 +87,15 @@ Assert-True ($firmwares.Count -ge 2) "Firmware flasher should expose firmware sk
 $rainbowFirmware = Resolve-FirmwareSelection -Firmwares $firmwares -Choice "RainbowLight"
 Assert-Equal $rainbowFirmware.Id "RainbowLight" "Rainbow firmware should be discoverable."
 Assert-Equal $rainbowFirmware.Name "Rainbow Light" "Rainbow firmware display name should be human-readable."
-Assert-Equal $rainbowFirmware.RelativeSketchPath "hardware\arduino\SerialStatusLight\RainbowLight.ino" "Rainbow firmware sketch path should stay directly under the SerialStatusLight folder."
+Assert-Equal $rainbowFirmware.RelativeSketchPath "hardware\arduino\SerialStatusLight\RainbowLight\RainbowLight.ino" "Rainbow firmware sketch path should use a standard Arduino sketch folder."
 Assert-True (Test-Path -LiteralPath $rainbowFirmware.SketchPath) "Rainbow firmware sketch path should exist on disk."
-Assert-True (!(Test-Path -LiteralPath (Join-Path $Root "hardware\arduino\SerialStatusLight\RainbowLight"))) "Rainbow firmware should not create an extra nested folder."
+Assert-True (!(Test-Path -LiteralPath (Join-Path $Root "hardware\arduino\SerialStatusLight\RainbowLight.ino"))) "Rainbow firmware should not live as a peer ino file."
 $statusFirmware = Resolve-FirmwareSelection -Firmwares $firmwares -Choice "SerialStatusLight"
 Assert-Equal $statusFirmware.Id "SerialStatusLight" "Status firmware should still be available."
 Assert-Equal $statusFirmware.Name "Serial Status Light" "Status firmware display name should be human-readable."
-Assert-Equal $statusFirmware.RelativeSketchPath "hardware\arduino\SerialStatusLight\SerialStatusLight.ino" "Status firmware sketch path should point to the existing sketch."
+Assert-Equal $statusFirmware.RelativeSketchPath "hardware\arduino\SerialStatusLight\SerialStatusLight\SerialStatusLight.ino" "Status firmware sketch path should use a standard Arduino sketch folder."
 Assert-True (Test-Path -LiteralPath $statusFirmware.SketchPath) "Status firmware sketch path should exist on disk."
+Assert-True (!(Test-Path -LiteralPath (Join-Path $Root "hardware\arduino\SerialStatusLight\SerialStatusLight.ino"))) "Status firmware should not live as a peer ino file."
 
 $selectedFirmwareByNumber = Resolve-FirmwareSelection -Firmwares $firmwares -Choice "1"
 Assert-Equal $selectedFirmwareByNumber.Id "RainbowLight" "Numeric firmware selection should use one-based indexes."
@@ -102,15 +106,8 @@ Assert-True (![string]::IsNullOrWhiteSpace($selectedFirmwareByName.SketchPath)) 
 Assert-Equal (Resolve-FirmwareSelection -Firmwares $firmwares -Choice "999") $null "Out-of-range firmware selection should be rejected."
 Assert-Equal (Resolve-FirmwareSelection -Firmwares $firmwares -Choice "OtherFirmware") $null "Unknown firmware id should be rejected."
 
-$isolatedTempRoot = Join-Path ([IO.Path]::GetTempPath()) ("agent-hook-light-firmware-test-" + [guid]::NewGuid())
-try {
-  $isolatedSketchPath = Copy-FirmwareToIsolatedSketch -SelectedFirmware $rainbowFirmware -TempRoot $isolatedTempRoot
-  Assert-Equal $isolatedSketchPath (Join-Path $isolatedTempRoot "RainbowLight\RainbowLight.ino") "Isolated sketch path should use an Arduino-compatible folder and filename."
-  Assert-True (Test-Path -LiteralPath $isolatedSketchPath) "Isolated sketch should be copied to disk."
-  Assert-Equal (Get-Content -Raw -LiteralPath $isolatedSketchPath) (Get-Content -Raw -LiteralPath $rainbowFirmware.SketchPath) "Isolated sketch content should match the selected firmware."
-} finally {
-  Remove-Item -LiteralPath $isolatedTempRoot -Recurse -Force -ErrorAction SilentlyContinue
-}
+$flasherSource = Get-Content -Raw -LiteralPath $FlasherScript
+Assert-True ($flasherSource -notlike "*Copy-FirmwareToIsolatedSketch*") "Standard Arduino sketch folders should let the flasher compile selected firmware directly without temporary copying."
 
 Assert-Equal (Move-MenuSelection -CurrentIndex 0 -ItemCount 3 -Key "DownArrow") 1 "DownArrow should move to the next firmware port menu item."
 Assert-Equal (Move-MenuSelection -CurrentIndex 2 -ItemCount 3 -Key "DownArrow") 0 "DownArrow should wrap firmware port menu selection to the first item."

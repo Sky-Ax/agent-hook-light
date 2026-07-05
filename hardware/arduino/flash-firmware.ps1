@@ -12,7 +12,7 @@ try {
 }
 
 $Esp32PackageUrl = "https://espressif.github.io/arduino-esp32/package_esp32_index.json"
-$BoardFqbn = "esp32:esp32:esp32c3"
+$BoardFqbn = "esp32:esp32:esp32c3:CDCOnBoot=cdc"
 $FastLedVersion = "3.9.4"
 $FirmwareRootRelativePath = "hardware\arduino\SerialStatusLight"
 
@@ -54,6 +54,10 @@ function Get-ArduinoCliPath {
   param([string]$RootDir)
 
   return (Join-Path $RootDir "tools\arduino-cli\arduino-cli.exe")
+}
+
+function Get-BoardFqbn {
+  return $BoardFqbn
 }
 
 function Get-ArduinoDataDir {
@@ -134,9 +138,14 @@ function Get-FirmwareDefinitions {
   }
 
   $firmwares = @()
-  $sketches = @(Get-ChildItem -LiteralPath $firmwareRoot -Filter "*.ino" -File)
-  foreach ($sketch in $sketches) {
-    $firmwareId = [IO.Path]::GetFileNameWithoutExtension($sketch.Name)
+  $firmwareDirs = @(Get-ChildItem -LiteralPath $firmwareRoot -Directory)
+  foreach ($firmwareDir in $firmwareDirs) {
+    $firmwareId = $firmwareDir.Name
+    $sketch = Get-Item -LiteralPath (Join-Path $firmwareDir.FullName ($firmwareId + ".ino")) -ErrorAction SilentlyContinue
+    if (!$sketch) {
+      continue
+    }
+
     $relativeSketchPath = Convert-ToProjectRelativePath -RootDir $RootDir -Path $sketch.FullName
     $firmwares += [pscustomobject]@{
       Id                 = $firmwareId
@@ -446,21 +455,6 @@ function Select-Firmware {
   throw "Firmware selection was cancelled."
 }
 
-function Copy-FirmwareToIsolatedSketch {
-  param(
-    [object]$SelectedFirmware,
-    [string]$TempRoot
-  )
-
-  $sketchDir = Join-Path $TempRoot $SelectedFirmware.Id
-  $sketchPath = Join-Path $sketchDir ($SelectedFirmware.Id + ".ino")
-
-  New-Item -ItemType Directory -Path $sketchDir -Force | Out-Null
-  Copy-Item -LiteralPath $SelectedFirmware.SketchPath -Destination $sketchPath -Force
-
-  return $sketchPath
-}
-
 function Format-CommandArgument {
   param([string]$Argument)
 
@@ -703,18 +697,13 @@ function Invoke-FirmwareFlash {
     throw "Missing firmware sketch: $($SelectedFirmware.SketchPath)"
   }
 
-  $tempRoot = Join-Path ([IO.Path]::GetTempPath()) ("agent-hook-light-firmware-" + [guid]::NewGuid())
-  try {
-    $sketchPath = Copy-FirmwareToIsolatedSketch -SelectedFirmware $SelectedFirmware -TempRoot $tempRoot
+  $sketchPath = $SelectedFirmware.SketchPath
 
-    Write-FlasherStep "Compiling firmware: $($SelectedFirmware.Name)..."
-    Invoke-CheckedCommand -FilePath $ArduinoCli -Arguments @("compile", "--fqbn", $BoardFqbn, $sketchPath)
+  Write-FlasherStep "Compiling firmware: $($SelectedFirmware.Name)..."
+  Invoke-CheckedCommand -FilePath $ArduinoCli -Arguments @("compile", "--fqbn", $BoardFqbn, $sketchPath)
 
-    Write-FlasherStep "Uploading firmware to $SelectedPort..."
-    Invoke-CheckedCommand -FilePath $ArduinoCli -Arguments @("upload", "-p", $SelectedPort, "--fqbn", $BoardFqbn, $sketchPath)
-  } finally {
-    Remove-Item -LiteralPath $tempRoot -Recurse -Force -ErrorAction SilentlyContinue
-  }
+  Write-FlasherStep "Uploading firmware to $SelectedPort..."
+  Invoke-CheckedCommand -FilePath $ArduinoCli -Arguments @("upload", "-p", $SelectedPort, "--fqbn", $BoardFqbn, $sketchPath)
 }
 
 function Invoke-FirmwareFlasher {

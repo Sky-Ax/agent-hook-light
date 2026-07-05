@@ -4,8 +4,8 @@ This folder contains the ESP32-C3 + WS2812B firmware for Agent Status Light.
 
 Firmware sketches live under `SerialStatusLight`:
 
-- `SerialStatusLight/SerialStatusLight.ino`: status light firmware for the current Go bridge
-- `SerialStatusLight/RainbowLight.ino`: standalone rainbow light demo firmware
+- `SerialStatusLight/SerialStatusLight/SerialStatusLight.ino`: status light firmware for the current Go bridge
+- `SerialStatusLight/RainbowLight/RainbowLight.ino`: standalone rainbow light demo firmware
 
 Shared hardware settings:
 
@@ -34,7 +34,7 @@ Default color mapping:
 | `attention` | Red |
 | `unknown` | Blue |
 
-When flashing from Arduino IDE, enable USB CDC on boot for ESP32-C3 serial access.
+The included flasher enables USB CDC on boot automatically so the firmware reads status lines from the selected COM port. When flashing from Arduino IDE, enable USB CDC on boot for ESP32-C3 serial access.
 
 ## Double-Click Flashing
 
@@ -46,7 +46,7 @@ From the repository root, run:
 
 The flasher downloads a local Arduino CLI into `tools/arduino-cli` if needed, installs ESP32 board support and FastLED, asks for the ESP32-C3 COM port, then compiles and uploads the firmware.
 
-When multiple `.ino` firmware sketches exist directly under `SerialStatusLight`, the flasher lists them first so you can choose which firmware to upload.
+Each firmware uses a standard Arduino sketch folder. The flasher lists sketch folders under `SerialStatusLight` first so you can choose which firmware to upload.
 
 If automatic download fails or you do not want the script to download tools, download Arduino CLI manually:
 

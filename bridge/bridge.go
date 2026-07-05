@@ -253,8 +253,13 @@ func sendStateWithRecovery(port *serial.Port, cfg bridgeConfig, state string) er
 			openSerial = openSerialWithRetry
 		}
 		timedOutWrite := isSerialWriteTimeout(err)
+		writeStillReleasing := isSerialWriteStillReleasing(err)
 
 		logf("serial write failed on %s: %v", cfg.portName, err)
+		if writeStillReleasing {
+			return fmt.Errorf("serial connection was lost on %s while sending %q: previous serial write did not release after close. This usually means the selected COM port is not being consumed by the device firmware. For ESP32-C3, flash the Serial Status Light firmware with USB CDC On Boot enabled by running hardware\\arduino\\flash-firmware.cmd, then unplug/replug the board and run start.cmd again: %w", cfg.portName, state, err)
+		}
+
 		logf("serial connection may be lost; reconnecting %s...", cfg.portName)
 		if *port != nil {
 			_ = (*port).Close()
@@ -284,6 +289,10 @@ func sendStateWithRecovery(port *serial.Port, cfg bridgeConfig, state string) er
 
 func isSerialWriteTimeout(err error) bool {
 	return strings.Contains(strings.ToLower(err.Error()), "serial write timed out")
+}
+
+func isSerialWriteStillReleasing(err error) bool {
+	return strings.Contains(strings.ToLower(err.Error()), "previous write is still releasing")
 }
 
 func waitForDeviceSerialStartup(cfg bridgeConfig) {

@@ -335,6 +335,63 @@ function Invoke-InstallerMode {
   return [int]$exitCode
 }
 
+function Get-BridgeSourceDir {
+  param([string]$RootDir)
+
+  return (Join-Path $RootDir "bridge")
+}
+
+function Invoke-BridgeBuild {
+  param(
+    [string]$RootDir,
+    [string]$BridgeExe,
+    [string]$GoExe = "go"
+  )
+
+  $bridgeSourceDir = Get-BridgeSourceDir -RootDir $RootDir
+  if (!(Test-Path -LiteralPath $bridgeSourceDir)) {
+    throw "Missing bridge source directory: $bridgeSourceDir"
+  }
+
+  $bridgeBinDir = Split-Path -Parent $BridgeExe
+  if (!(Test-Path -LiteralPath $bridgeBinDir)) {
+    New-Item -ItemType Directory -Path $bridgeBinDir | Out-Null
+  }
+
+  Push-Location $bridgeSourceDir
+  try {
+    & $GoExe build -o $BridgeExe .
+    $exitCode = $LASTEXITCODE
+  } finally {
+    Pop-Location
+  }
+
+  if ($exitCode -ne 0) {
+    throw "Go build failed with exit code ${exitCode}. Install Go or run manually: cd bridge; go build -o ..\bin\ai-hook-bridge.exe ."
+  }
+
+  if (!(Test-Path -LiteralPath $BridgeExe)) {
+    throw "Go build completed but bridge executable was not created: $BridgeExe"
+  }
+}
+
+function Ensure-BridgeExecutable {
+  param(
+    [string]$RootDir,
+    [string]$BridgeExe,
+    [string]$GoExe = "go"
+  )
+
+  if (Test-Path -LiteralPath $BridgeExe) {
+    return
+  }
+
+  Write-LauncherWarning "Bridge executable is missing: $BridgeExe"
+  Write-LauncherStep "Building Go bridge executable..."
+  Invoke-BridgeBuild -RootDir $RootDir -BridgeExe $BridgeExe -GoExe $GoExe
+  Write-LauncherSuccess "Bridge executable built: $BridgeExe"
+}
+
 function Select-SerialPort {
   param(
     [string]$BridgeExe,
@@ -402,9 +459,7 @@ function Invoke-AgentStatusLightLauncher {
     throw "Missing installer: $installScript"
   }
 
-  if (!(Test-Path -LiteralPath $bridgeExe)) {
-    throw "Missing bridge executable: $bridgeExe"
-  }
+  Ensure-BridgeExecutable -RootDir $rootDir -BridgeExe $bridgeExe
 
   Write-LauncherStep "Step 1/3  Checking Codex hook setup..."
   $checkCode = Invoke-InstallerMode -InstallScript $installScript -Mode "-Check"

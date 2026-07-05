@@ -98,6 +98,34 @@ func TestSendStateWithRecoveryExplainsBusyAfterTimedOutWrite(t *testing.T) {
 	}
 }
 
+func TestSendStateWithRecoveryDoesNotReconnectWhenWriteIsStillReleasing(t *testing.T) {
+	oldPort := &scriptedSerialPort{writeErrs: []error{errors.New("serial write timed out after 3s; previous write is still releasing after 5s")}}
+	openCalls := 0
+	cfg := bridgeConfig{
+		portName:     "COM5",
+		baudRate:     115200,
+		writeTimeout: time.Second,
+		openSerial: func(name string, baudRate int) (serial.Port, error) {
+			openCalls++
+			return nil, errors.New("should not reconnect while old write is still releasing")
+		},
+	}
+	port := serial.Port(oldPort)
+
+	err := sendStateWithRecovery(&port, cfg, "idle")
+	if err == nil {
+		t.Fatal("sendStateWithRecovery returned nil, want still-releasing failure")
+	}
+	if openCalls != 0 {
+		t.Fatalf("open calls = %d, want 0 while the previous write is still releasing", openCalls)
+	}
+	for _, want := range []string{"previous serial write did not release", "USB CDC On Boot", "flash-firmware.cmd"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("error %q should contain %q", err, want)
+		}
+	}
+}
+
 func TestWriteWithTimeoutPurgesAndClosesPortBeforeReturning(t *testing.T) {
 	port := newBlockingSerialPort()
 
