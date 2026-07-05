@@ -2,8 +2,8 @@ $ErrorActionPreference = "Stop"
 
 $TestDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $Root = Split-Path -Parent $TestDir
-$LauncherScript = Join-Path $Root "bin\agent-status-light.ps1"
-$Temp = Join-Path ([IO.Path]::GetTempPath()) ("agent-status-light-launcher-" + [guid]::NewGuid())
+$LauncherScript = Join-Path $Root "bin\agent-hook-light.ps1"
+$Temp = Join-Path ([IO.Path]::GetTempPath()) ("agent-hook-light-launcher-" + [guid]::NewGuid())
 
 function Assert-Equal {
   param($Actual, $Expected, [string]$Message)
@@ -42,11 +42,17 @@ try {
     $launcherBytes[2] -eq 0xBF
   ) "Launcher script should use UTF-8 with BOM so Windows PowerShell 5.1 reads emoji and arrows correctly."
 
-  $configPath = Join-Path $Temp "agent-status-light.config.json"
+  $configPath = Join-Path $Temp "agent-hook-light.config.json"
   Assert-NullValue (Get-SavedSerialPort -ConfigFile $configPath) "Missing config should not produce a saved port."
 
   Save-SelectedSerialPort -ConfigFile $configPath -Port "COM4"
   Assert-Equal (Get-SavedSerialPort -ConfigFile $configPath) "COM4" "Saved port should round-trip through JSON config."
+
+  $legacyConfigPath = Join-Path $Temp "agent-status-light.config.json"
+  Save-SelectedSerialPort -ConfigFile $legacyConfigPath -Port "COM5"
+  Remove-Item -LiteralPath $configPath -Force
+  Assert-Equal (Get-SavedSerialPort -ConfigFile $configPath -LegacyConfigFile $legacyConfigPath) "COM5" "Legacy config should migrate to the Agent Hook Light config path."
+  Assert-Equal (Get-SavedSerialPort -ConfigFile $configPath) "COM5" "Migrated config should be readable from the new path."
 
   $statusPath = Join-Path $Temp "codex-status.json"
   Ensure-StatusFile -StatusFile $statusPath

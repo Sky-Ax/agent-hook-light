@@ -11,7 +11,7 @@ try {
 function Write-LauncherHeader {
   Write-Host ""
   Write-Host "+----------------------------------------+"
-  Write-Host "|  💡 Agent Status Light                 |"
+  Write-Host "|  💡 Agent Hook Light                   |"
   Write-Host "|  Codex hook + ESP32 status bridge      |"
   Write-Host "+----------------------------------------+"
   Write-Host ""
@@ -48,14 +48,24 @@ function Write-LauncherInfo {
 }
 
 function Get-SavedSerialPort {
-  param([string]$ConfigFile)
+  param(
+    [string]$ConfigFile,
+    [string]$LegacyConfigFile = ""
+  )
 
-  if (!(Test-Path -LiteralPath $ConfigFile)) {
-    return $null
+  $configPath = $ConfigFile
+  $shouldMigrate = $false
+  if (!(Test-Path -LiteralPath $configPath)) {
+    if (![string]::IsNullOrWhiteSpace($LegacyConfigFile) -and (Test-Path -LiteralPath $LegacyConfigFile)) {
+      $configPath = $LegacyConfigFile
+      $shouldMigrate = $true
+    } else {
+      return $null
+    }
   }
 
   try {
-    $config = Get-Content -LiteralPath $ConfigFile -Raw -Encoding UTF8 | ConvertFrom-Json
+    $config = Get-Content -LiteralPath $configPath -Raw -Encoding UTF8 | ConvertFrom-Json
     if (!$config.PSObject.Properties["saved_port"]) {
       return $null
     }
@@ -65,7 +75,12 @@ function Get-SavedSerialPort {
       return $null
     }
 
-    return $port.Trim().ToUpperInvariant()
+    $normalizedPort = $port.Trim().ToUpperInvariant()
+    if ($shouldMigrate) {
+      Save-SelectedSerialPort -ConfigFile $ConfigFile -Port $normalizedPort
+    }
+
+    return $normalizedPort
   } catch {
     return $null
   }
@@ -323,7 +338,8 @@ function Invoke-InstallerMode {
 function Select-SerialPort {
   param(
     [string]$BridgeExe,
-    [string]$ConfigFile
+    [string]$ConfigFile,
+    [string]$LegacyConfigFile = ""
   )
 
   $ports = @(Get-SerialPorts -BridgeExe $BridgeExe)
@@ -331,7 +347,7 @@ function Select-SerialPort {
     throw "No serial ports found. Connect the ESP32 device and try again."
   }
 
-  $savedPort = Get-SavedSerialPort -ConfigFile $ConfigFile
+  $savedPort = Get-SavedSerialPort -ConfigFile $ConfigFile -LegacyConfigFile $LegacyConfigFile
   if ($savedPort) {
     if ($ports -contains $savedPort) {
       $selection = Show-KeyboardMenu `
@@ -372,7 +388,8 @@ function Invoke-AgentStatusLightLauncher {
   $installScript = Join-Path $binDir "install.ps1"
   $bridgeExe = Join-Path $binDir "ai-hook-bridge.exe"
   $statusFile = Join-Path $dataDir "codex-status.json"
-  $configFile = Join-Path $dataDir "agent-status-light.config.json"
+  $configFile = Join-Path $dataDir "agent-hook-light.config.json"
+  $legacyConfigFile = Join-Path $dataDir "agent-status-light.config.json"
 
   Clear-Host
   Write-LauncherHeader
@@ -429,7 +446,7 @@ function Invoke-AgentStatusLightLauncher {
     return 0
   }
 
-  $selectedPort = Select-SerialPort -BridgeExe $bridgeExe -ConfigFile $configFile
+  $selectedPort = Select-SerialPort -BridgeExe $bridgeExe -ConfigFile $configFile -LegacyConfigFile $legacyConfigFile
   Ensure-StatusFile -StatusFile $statusFile
 
   Clear-Host

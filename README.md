@@ -1,10 +1,10 @@
-# Agent Status Light
+# Agent Hook Light
 
-**Agent Status Light** turns AI coding agent activity into a physical ambient signal.
+**Agent Hook Light** turns AI coding agent hook activity into a physical ambient signal.
 
 It connects agent hooks, a local Go bridge, and an ESP32-C3 + WS2812 LED ring so your AI coding workflow is no longer only text on a screen. Idle, working, waiting for approval, and unknown states can be reflected as light, color, and eventually richer device behaviors.
 
-**Agent Status Light** 是一个把 AI 编程 Agent 状态转成实体灯光反馈的开源项目。
+**Agent Hook Light** 是一个把 AI 编程 Agent hook 状态转成实体灯光反馈的开源项目。
 
 它通过 Agent Hooks 捕获会话事件，由本地 Go 桥接程序转发到 ESP32-C3 + WS2812 灯环，让 AI 编程状态从屏幕里的文本变成桌面上的环境信号。空闲、工作中、需要注意、未知状态，都可以被映射成颜色、灯效或后续更复杂的硬件行为。
 
@@ -63,7 +63,7 @@ ESP32-C3 + WS2812 LED Ring
 
 ## Supported Agents
 
-Agent Status Light uses a backend adapter model. Each agent backend only needs to normalize its own hook/event format into the shared status protocol:
+Agent Hook Light uses a backend adapter model. Each agent backend only needs to normalize its own hook/event format into the shared status protocol:
 
 ```text
 idle
@@ -193,7 +193,7 @@ Optional environment variables:
 ```text
 start.cmd               Double-click setup and bridge launcher
 bin/
-  agent-status-light.ps1 Internal launcher logic
+  agent-hook-light.ps1   Internal launcher logic
   codex-hook.cmd       Codex hook command wrapper
   ai-hook-bridge.exe   Built Go executable
   install.ps1          Hook installer/checker

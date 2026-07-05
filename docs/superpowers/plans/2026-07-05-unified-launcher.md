@@ -4,7 +4,7 @@
 
 **Goal:** Build a root-level double-click launcher that checks Codex hook setup, installs when needed, and starts the serial bridge only after the user explicitly selects or confirms a COM port.
 
-**Architecture:** Keep `bin` as the internal implementation directory and expose `start.cmd` as the user-facing entry point. The launcher calls the existing PowerShell installer for check/install/uninstall work, calls the Go bridge executable for port listing and bridge mode, and stores the selected serial port in `data\agent-status-light.config.json`.
+**Architecture:** Keep `bin` as the internal implementation directory and expose `start.cmd` as the user-facing entry point. The launcher calls the existing PowerShell installer for check/install/uninstall work, calls the Go bridge executable for port listing and bridge mode, and stores the selected serial port in `data\agent-hook-light.config.json`.
 
 **Tech Stack:** Windows batch, PowerShell, existing Go bridge executable, existing installer script.
 
@@ -32,10 +32,10 @@ set "DATA_DIR=%ROOT_DIR%\data"
 set "INSTALL_PS1=%BIN_DIR%\install.ps1"
 set "BRIDGE_EXE=%BIN_DIR%\ai-hook-bridge.exe"
 set "STATUS_FILE=%DATA_DIR%\codex-status.json"
-set "CONFIG_FILE=%DATA_DIR%\agent-status-light.config.json"
+set "CONFIG_FILE=%DATA_DIR%\agent-hook-light.config.json"
 
 echo.
-echo Agent Status Light
+echo Agent Hook Light
 echo ==================
 echo.
 
@@ -131,7 +131,7 @@ goto end
 
 :end_failed
 echo.
-echo Agent Status Light could not continue.
+echo Agent Hook Light could not continue.
 echo Check the messages above, then try again.
 
 :end
