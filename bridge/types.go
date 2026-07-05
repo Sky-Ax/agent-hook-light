@@ -1,6 +1,10 @@
 package main
 
-import "time"
+import (
+	"time"
+
+	"go.bug.st/serial"
+)
 
 type statusFile struct {
 	Provider     string                   `json:"provider,omitempty"`
@@ -26,6 +30,7 @@ type bridgeConfig struct {
 	once         bool
 	dryRun       bool
 	listPorts    bool
+	openSerial   func(portName string, baudRate int) (serial.Port, error)
 }
 
 type hookConfig struct {

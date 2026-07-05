@@ -21,6 +21,9 @@ func runBridge(args []string) error {
 	if cfg.listPorts {
 		return printPorts()
 	}
+	if cfg.openSerial == nil {
+		cfg.openSerial = openSerialWithRetry
+	}
 
 	if cfg.statusPath == "" {
 		root, err := findProjectRoot()
@@ -43,16 +46,17 @@ func runBridge(args []string) error {
 			}
 		}
 
-		port, err = openSerialWithRetry(cfg.portName, cfg.baudRate)
+		port, err = cfg.openSerial(cfg.portName, cfg.baudRate)
 		if err != nil {
 			return fmt.Errorf("open serial port %s failed: %w", cfg.portName, err)
 		}
-		defer port.Close()
+		defer func() {
+			if port != nil {
+				_ = port.Close()
+			}
+		}()
 		logf("serial connected: %s @ %d", cfg.portName, cfg.baudRate)
-		if cfg.openDelay > 0 {
-			logf("waiting %s for device serial startup", cfg.openDelay)
-			time.Sleep(cfg.openDelay)
-		}
+		waitForDeviceSerialStartup(cfg)
 	} else {
 		if cfg.portName == "" {
 			cfg.portName = "DRY-RUN"
@@ -70,7 +74,7 @@ func runBridge(args []string) error {
 		} else if state != "" {
 			lastMod = modTime
 			if state != lastSent {
-				if err := sendState(port, cfg, state); err != nil {
+				if err := sendStateWithRecovery(&port, cfg, state); err != nil {
 					return err
 				}
 				lastSent = state
@@ -235,6 +239,49 @@ func sendState(port serial.Port, cfg bridgeConfig, state string) error {
 
 	logf("sent %s -> %s", state, cfg.portName)
 	return nil
+}
+
+func sendStateWithRecovery(port *serial.Port, cfg bridgeConfig, state string) error {
+	if err := sendState(*port, cfg, state); err != nil {
+		if cfg.dryRun {
+			return err
+		}
+		openSerial := cfg.openSerial
+		if openSerial == nil {
+			openSerial = openSerialWithRetry
+		}
+
+		logf("serial write failed on %s: %v", cfg.portName, err)
+		logf("serial connection may be lost; reconnecting %s...", cfg.portName)
+		if *port != nil {
+			_ = (*port).Close()
+		}
+
+		reopened, openErr := openSerial(cfg.portName, cfg.baudRate)
+		if openErr != nil {
+			return fmt.Errorf("serial connection was lost on %s while sending %q, and reconnect failed: %w. Unplug/replug the ESP32, close other serial tools, then run start.cmd again to choose the correct COM port", cfg.portName, state, openErr)
+		}
+
+		*port = reopened
+		logf("serial reconnected: %s @ %d", cfg.portName, cfg.baudRate)
+		waitForDeviceSerialStartup(cfg)
+
+		if retryErr := sendState(*port, cfg, state); retryErr != nil {
+			_ = (*port).Close()
+			return fmt.Errorf("serial connection was lost on %s while sending %q; reconnected but retry failed: %w. Unplug/replug the ESP32, close other serial tools, then run start.cmd again to choose the correct COM port", cfg.portName, state, retryErr)
+		}
+	}
+
+	return nil
+}
+
+func waitForDeviceSerialStartup(cfg bridgeConfig) {
+	if cfg.openDelay <= 0 {
+		return
+	}
+
+	logf("waiting %s for device serial startup", cfg.openDelay)
+	time.Sleep(cfg.openDelay)
 }
 
 func writeWithTimeout(port serial.Port, data []byte, timeout time.Duration) error {

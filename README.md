@@ -149,7 +149,7 @@ Launch the beginner setup and bridge starter:
 .\start.cmd
 ```
 
-The launcher checks the Codex hook setup first. If the hook is missing or incomplete, it asks before installing it. After setup passes, it uses a keyboard menu to ask whether to start the bridge, lists available COM ports, requires you to select the ESP32 serial port, saves that choice, and starts the bridge with the selected port.
+The launcher checks the Codex hook setup first. If the hook is missing or incomplete, it asks before installing it. After setup passes, it uses a keyboard menu to ask whether to start the bridge, lists available COM ports, requires you to select the ESP32 serial port, saves that choice, and starts the bridge with the selected port. If a later serial write fails, the bridge first tries to reconnect the same selected port before showing an actionable error.
 
 In the launcher, use the arrow keys to choose, Space or Enter to confirm, and Esc to cancel.
 
