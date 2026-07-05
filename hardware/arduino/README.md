@@ -1,11 +1,12 @@
 # Arduino Firmware
 
-This folder contains the ESP32-C3 + WS2812B firmware for Agent Status Light.
+This folder contains the ESP32-C3 + WS2812B firmware for Agent Hook Light.
 
-Firmware sketches live under `SerialStatusLight`:
+Firmware sketches live under `firmware`:
 
-- `SerialStatusLight/SerialStatusLight/SerialStatusLight.ino`: status light firmware for the current Go bridge
-- `SerialStatusLight/RainbowLight/RainbowLight.ino`: standalone rainbow light demo firmware
+- `firmware/StatusLightV2/StatusLightV2.ino`: richer animated status firmware for the expanded state protocol; recommended for new installs
+- `firmware/StatusLightBaseV1/StatusLightBaseV1.ino`: base compatibility firmware for the current Go bridge
+- `firmware/RainbowLight/RainbowLight.ino`: standalone rainbow light demo firmware
 
 Shared hardware settings:
 
@@ -16,7 +17,7 @@ Shared hardware settings:
 - Color order: GRB
 - Serial baud rate: 115200
 
-The firmware reads one status line from USB serial:
+The compatibility V1 firmware reads one status line from USB serial:
 
 ```text
 idle
@@ -34,6 +35,44 @@ Default color mapping:
 | `attention` | Red |
 | `unknown` | Blue |
 
+The V2 firmware accepts the expanded status vocabulary:
+
+```text
+idle
+thinking
+working
+waiting
+success
+error
+unknown
+```
+
+Compatibility aliases accepted by V2:
+
+| Alias | V2 state |
+| --- | --- |
+| `submitted` | `thinking` |
+| `tool_running` | `working` |
+| `waiting_user` | `waiting` |
+| `waiting_permission` | `waiting` |
+| `done` | `success` |
+| `complete` | `success` |
+| `failed` | `error` |
+| `failure` | `error` |
+| `attention` | `error` |
+
+V2 default effects:
+
+| State | Effect |
+| --- | --- |
+| `idle` | Green breathing |
+| `thinking` | Blue moving pulse |
+| `working` | Yellow/orange chase |
+| `waiting` | Purple breathing |
+| `success` | Green with bright sweep |
+| `error` | Red flash |
+| `unknown` | Solid blue |
+
 The included flasher enables USB CDC on boot automatically so the firmware reads status lines from the selected COM port. When flashing from Arduino IDE, enable USB CDC on boot for ESP32-C3 serial access.
 
 ## Double-Click Flashing
@@ -44,9 +83,9 @@ From the repository root, run:
 .\hardware\arduino\flash-firmware.cmd
 ```
 
-The flasher downloads a local Arduino CLI into `tools/arduino-cli` if needed, installs ESP32 board support and FastLED, asks for the ESP32-C3 COM port, then compiles and uploads the firmware.
+The flasher downloads a local Arduino CLI into `tools/arduino-cli` if needed, installs ESP32 board support and FastLED, asks which firmware to flash, asks for the ESP32-C3 COM port, then compiles and uploads the firmware. For normal Agent Hook Light use, choose `Status Light V2`.
 
-Each firmware uses a standard Arduino sketch folder. The flasher lists sketch folders under `SerialStatusLight` first so you can choose which firmware to upload.
+Each firmware uses a standard Arduino sketch folder. The flasher lists sketch folders under `firmware` first so you can choose which firmware to upload.
 
 If automatic download fails or you do not want the script to download tools, download Arduino CLI manually:
 

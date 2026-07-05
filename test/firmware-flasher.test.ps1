@@ -77,31 +77,49 @@ Assert-Equal (Get-RetryAttemptMessage -Attempt 2 -Attempts 3) "Retry attempt 2/3
 Assert-Equal (Get-RetryAttemptMessage -Attempt 3 -Attempts 3) "Retry attempt 3/3" "Third command attempt should be labeled as a retry."
 
 $firmwareRoot = Get-FirmwareRootDir -RootDir $Root
-Assert-Equal $firmwareRoot (Join-Path $Root "hardware\arduino\SerialStatusLight") "Firmware discovery should be limited to the SerialStatusLight folder."
+Assert-Equal $firmwareRoot (Join-Path $Root "hardware\arduino\firmware") "Firmware discovery should use the shared Arduino firmware folder."
 
-Assert-Equal (Convert-FirmwareIdToName -Id "SerialStatusLight") "Serial Status Light" "Firmware display names should split PascalCase ids."
+Assert-Equal (Convert-FirmwareIdToName -Id "StatusLightBaseV1") "Status Light Base V1" "Status firmware display names should include the version."
+Assert-Equal (Convert-FirmwareIdToName -Id "StatusLightV2") "Status Light V2" "V2 status firmware display name should include the version."
 Assert-Equal (Convert-FirmwareIdToName -Id "RainbowLight") "Rainbow Light" "Firmware display names should be readable for new firmware ids."
 
 $firmwares = @(Get-FirmwareDefinitions -RootDir $Root)
-Assert-True ($firmwares.Count -ge 2) "Firmware flasher should expose firmware sketches from inside the SerialStatusLight folder."
+Assert-True ($firmwares.Count -ge 2) "Firmware flasher should expose firmware sketches from the shared Arduino firmware folder."
 $rainbowFirmware = Resolve-FirmwareSelection -Firmwares $firmwares -Choice "RainbowLight"
 Assert-Equal $rainbowFirmware.Id "RainbowLight" "Rainbow firmware should be discoverable."
 Assert-Equal $rainbowFirmware.Name "Rainbow Light" "Rainbow firmware display name should be human-readable."
-Assert-Equal $rainbowFirmware.RelativeSketchPath "hardware\arduino\SerialStatusLight\RainbowLight\RainbowLight.ino" "Rainbow firmware sketch path should use a standard Arduino sketch folder."
+Assert-Equal $rainbowFirmware.RelativeSketchPath "hardware\arduino\firmware\RainbowLight\RainbowLight.ino" "Rainbow firmware sketch path should use a standard Arduino sketch folder."
 Assert-True (Test-Path -LiteralPath $rainbowFirmware.SketchPath) "Rainbow firmware sketch path should exist on disk."
-Assert-True (!(Test-Path -LiteralPath (Join-Path $Root "hardware\arduino\SerialStatusLight\RainbowLight.ino"))) "Rainbow firmware should not live as a peer ino file."
-$statusFirmware = Resolve-FirmwareSelection -Firmwares $firmwares -Choice "SerialStatusLight"
-Assert-Equal $statusFirmware.Id "SerialStatusLight" "Status firmware should still be available."
-Assert-Equal $statusFirmware.Name "Serial Status Light" "Status firmware display name should be human-readable."
-Assert-Equal $statusFirmware.RelativeSketchPath "hardware\arduino\SerialStatusLight\SerialStatusLight\SerialStatusLight.ino" "Status firmware sketch path should use a standard Arduino sketch folder."
+Assert-True (!(Test-Path -LiteralPath (Join-Path $Root "hardware\arduino\firmware\RainbowLight.ino"))) "Rainbow firmware should not live as a peer ino file."
+$statusFirmware = Resolve-FirmwareSelection -Firmwares $firmwares -Choice "StatusLightBaseV1"
+Assert-Equal $statusFirmware.Id "StatusLightBaseV1" "Versioned base status firmware should be available."
+Assert-Equal $statusFirmware.Name "Status Light Base V1" "Status firmware display name should include the version."
+Assert-Equal $statusFirmware.RelativeSketchPath "hardware\arduino\firmware\StatusLightBaseV1\StatusLightBaseV1.ino" "Status firmware sketch path should use a versioned standard Arduino sketch folder."
 Assert-True (Test-Path -LiteralPath $statusFirmware.SketchPath) "Status firmware sketch path should exist on disk."
-Assert-True (!(Test-Path -LiteralPath (Join-Path $Root "hardware\arduino\SerialStatusLight\SerialStatusLight.ino"))) "Status firmware should not live as a peer ino file."
+Assert-True (!(Test-Path -LiteralPath (Join-Path $Root "hardware\arduino\firmware\StatusLightBaseV1.ino"))) "Status firmware should not live as a peer ino file."
+Assert-True (!(Test-Path -LiteralPath (Join-Path $Root "hardware\arduino\SerialStatusLight"))) "Old SerialStatusLight firmware container should be removed."
+$statusV2Firmware = Resolve-FirmwareSelection -Firmwares $firmwares -Choice "StatusLightV2"
+Assert-Equal $statusV2Firmware.Id "StatusLightV2" "V2 status firmware should be available."
+Assert-Equal $statusV2Firmware.Name "Status Light V2" "V2 status firmware display name should include the version."
+Assert-Equal $statusV2Firmware.RelativeSketchPath "hardware\arduino\firmware\StatusLightV2\StatusLightV2.ino" "V2 status firmware sketch path should use a versioned standard Arduino sketch folder."
+Assert-True (Test-Path -LiteralPath $statusV2Firmware.SketchPath) "V2 status firmware sketch path should exist on disk."
+Assert-True (!(Test-Path -LiteralPath (Join-Path $Root "hardware\arduino\firmware\StatusLightV2.ino"))) "V2 status firmware should not live as a peer ino file."
+
+$statusV2Source = Get-Content -Raw -LiteralPath $statusV2Firmware.SketchPath
+foreach ($stateName in @("idle", "thinking", "working", "waiting", "success", "error", "unknown")) {
+  Assert-True ($statusV2Source -like "*`"$stateName`"*") "V2 firmware should support the '$stateName' state."
+}
+foreach ($aliasName in @("submitted", "tool_running", "waiting_user", "waiting_permission", "done", "complete", "failed", "failure", "attention")) {
+  Assert-True ($statusV2Source -like "*`"$aliasName`"*") "V2 firmware should support the '$aliasName' compatibility alias."
+}
+Assert-True ($statusV2Source -cnotmatch '\bString\b') "V2 firmware should avoid Arduino String allocations in the serial parser."
+Assert-True ($statusV2Source -cnotmatch '\bdelay\s*\(') "V2 firmware should keep the serial/render loop non-blocking."
 
 $selectedFirmwareByNumber = Resolve-FirmwareSelection -Firmwares $firmwares -Choice "1"
 Assert-Equal $selectedFirmwareByNumber.Id "RainbowLight" "Numeric firmware selection should use one-based indexes."
 Assert-True (![string]::IsNullOrWhiteSpace($selectedFirmwareByNumber.SketchPath)) "Numeric firmware selection should return the full firmware object."
-$selectedFirmwareByName = Resolve-FirmwareSelection -Firmwares $firmwares -Choice "serialstatuslight"
-Assert-Equal $selectedFirmwareByName.Id "SerialStatusLight" "Firmware id selection should be case-insensitive."
+$selectedFirmwareByName = Resolve-FirmwareSelection -Firmwares $firmwares -Choice "statuslightbasev1"
+Assert-Equal $selectedFirmwareByName.Id "StatusLightBaseV1" "Firmware id selection should be case-insensitive."
 Assert-True (![string]::IsNullOrWhiteSpace($selectedFirmwareByName.SketchPath)) "Firmware id selection should return the full firmware object."
 Assert-Equal (Resolve-FirmwareSelection -Firmwares $firmwares -Choice "999") $null "Out-of-range firmware selection should be rejected."
 Assert-Equal (Resolve-FirmwareSelection -Firmwares $firmwares -Choice "OtherFirmware") $null "Unknown firmware id should be rejected."

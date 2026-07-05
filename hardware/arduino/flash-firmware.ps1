@@ -14,7 +14,7 @@ try {
 $Esp32PackageUrl = "https://espressif.github.io/arduino-esp32/package_esp32_index.json"
 $BoardFqbn = "esp32:esp32:esp32c3:CDCOnBoot=cdc"
 $FastLedVersion = "3.9.4"
-$FirmwareRootRelativePath = "hardware\arduino\SerialStatusLight"
+$FirmwareRootRelativePath = "hardware\arduino\firmware"
 
 function Write-FlasherHeader {
   Write-Host ""

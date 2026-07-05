@@ -67,8 +67,11 @@ Agent Hook Light uses a backend adapter model. Each agent backend only needs to 
 
 ```text
 idle
+thinking
 working
-attention
+waiting
+success
+error
 unknown
 ```
 
@@ -80,7 +83,7 @@ unknown
 | OpenCode | Planned | Hook adapter | Intended for OpenCode-style agent sessions. |
 | Cursor | Researching | Local workflow/status adapter | Requires a reliable local event source. |
 | Aider | Researching | Terminal session adapter | Could map command/session state into the shared protocol. |
-| Custom Agent | Planned | File / stdout / webhook adapter | Any tool that can emit `idle`, `working`, `attention`, or `unknown` can integrate. |
+| Custom Agent | Planned | File / stdout / webhook adapter | Any tool that can emit shared status lines can integrate. |
 
 The long-term goal is not to be tied to one agent runtime. Codex is simply the first implemented backend.
 
@@ -111,7 +114,7 @@ The long-term goal is not to be tied to one agent runtime. Codex is simply the f
 
 ## Status Protocol
 
-The bridge sends one normalized state per line:
+The current Go bridge sends one normalized compatibility state per line:
 
 ```text
 idle
@@ -120,14 +123,43 @@ attention
 unknown
 ```
 
-Default LED mapping:
+`StatusLightV2` accepts the expanded serial vocabulary:
 
-| State | Meaning | Default Color |
+```text
+idle
+thinking
+working
+waiting
+success
+error
+unknown
+```
+
+Compatibility aliases accepted by V2:
+
+| Alias | V2 state |
+| --- | --- |
+| `submitted` | `thinking` |
+| `tool_running` | `working` |
+| `waiting_user` | `waiting` |
+| `waiting_permission` | `waiting` |
+| `done` | `success` |
+| `complete` | `success` |
+| `failed` | `error` |
+| `failure` | `error` |
+| `attention` | `error` |
+
+Default V2 LED effects:
+
+| State | Meaning | Default Effect |
 | --- | --- | --- |
-| `idle` | Agent is stopped or waiting | Green |
-| `working` | Agent is processing, running tools, or handling a prompt | Yellow |
-| `attention` | User approval or attention is required | Red |
-| `unknown` | No reliable state is available | Blue |
+| `idle` | No active agent work | Green breathing |
+| `thinking` | Prompt was submitted and the agent is reasoning | Blue moving pulse |
+| `working` | Tool execution or active work is running | Yellow/orange chase |
+| `waiting` | User input or permission is needed | Purple breathing |
+| `success` | Work completed successfully | Green with bright sweep |
+| `error` | Failure or attention condition | Red flash |
+| `unknown` | No reliable state is available | Solid blue |
 
 ## Hardware
 
@@ -159,7 +191,7 @@ Flash the ESP32-C3 firmware:
 .\hardware\arduino\flash-firmware.cmd
 ```
 
-The firmware flasher prepares Arduino CLI locally under `tools/`, installs the ESP32 board package and pinned `FastLED@3.9.4`, lists firmware sketch folders from `hardware\arduino\SerialStatusLight`, asks for the ESP32 serial port, then directly compiles and uploads the selected firmware. If automatic download fails, it prints manual Arduino CLI or ESP32 board package instructions.
+The firmware flasher prepares Arduino CLI locally under `tools/`, installs the ESP32 board package and pinned `FastLED@3.9.4`, lists firmware sketch folders from `hardware\arduino\firmware`, asks for the ESP32 serial port, then directly compiles and uploads the selected firmware. For normal use, choose `Status Light V2`. If automatic download fails, it prints manual Arduino CLI or ESP32 board package instructions.
 
 Uninstall hooks only:
 
@@ -219,9 +251,11 @@ hardware/
   arduino/
     flash-firmware.cmd   Double-click ESP32-C3 firmware flasher
     flash-firmware.ps1   Firmware flasher implementation
-    SerialStatusLight/
-      SerialStatusLight/
-        SerialStatusLight.ino ESP32-C3 + WS2812B serial status firmware
+    firmware/
+      StatusLightV2/
+        StatusLightV2.ino     Rich animated ESP32-C3 + WS2812B serial status firmware
+      StatusLightBaseV1/
+        StatusLightBaseV1.ino Base compatibility ESP32-C3 + WS2812B serial status firmware
       RainbowLight/
         RainbowLight.ino      Standalone rainbow light demo firmware
 test/
@@ -259,12 +293,12 @@ go build -o ..\bin\ai-hook-bridge.exe .
 
 ## Roadmap
 
-- [ ] Add bundled ESP32 Arduino firmware examples.
+- [x] Add bundled ESP32 Arduino firmware examples.
 - [ ] Add Wi-Fi HTTP device mode.
 - [ ] Add configurable status-to-effect mapping.
 - [ ] Add Windows background service or tray launcher.
 - [ ] Add automatic COM port detection with device identity checks.
-- [ ] Add richer visual effects for long-running work, approval requests, and completion.
+- [x] Add richer visual effects for long-running work, approval requests, and completion.
 - [ ] Add adapters for more hook-capable AI agent tools.
 
 ## License
