@@ -4,7 +4,7 @@
 
 #define NUM_LEDS 24
 #define DATA_PIN 10
-#define BRIGHTNESS 128
+#define BRIGHTNESS 72
 #define SERIAL_BAUD 115200
 #define LED_TYPE WS2812B
 #define COLOR_ORDER GRB
@@ -26,9 +26,9 @@ const CRGB IDLE_COLOR = CRGB(0, 220, 90);
 const CRGB THINKING_COLOR = CRGB(30, 110, 255);
 const CRGB WORKING_COLOR = CRGB(255, 140, 0);
 const CRGB WAITING_COLOR = CRGB(150, 45, 255);
-const CRGB SUCCESS_COLOR = CRGB(0, 80, 55);
+const CRGB SUCCESS_COLOR = CRGB(0, 255, 0);
 const CRGB ERROR_COLOR = CRGB(255, 0, 0);
-const CRGB UNKNOWN_COLOR = CRGB(45, 40, 140);
+const CRGB UNKNOWN_COLOR = CRGB(0, 0, 160);
 
 CRGB leds[NUM_LEDS];
 
@@ -56,6 +56,7 @@ void drawChase(uint32_t now, const CRGB &color, uint8_t count, uint16_t speedMs)
 void drawOppositeDots(uint32_t now, const CRGB &color, uint16_t speedMs);
 void drawSingleScan(uint32_t now, const CRGB &color, uint16_t speedMs);
 void drawWaitingCue(bool active);
+void drawUnknownCue(uint32_t now);
 void setPixelWrapped(int index, const CRGB &color);
 CRGB scaledColor(CRGB color, uint8_t scale);
 
@@ -205,18 +206,22 @@ void renderState(uint32_t now) {
 }
 
 void renderIdle(uint32_t now) {
-  fillRing(IDLE_COLOR, 36);
-  drawSingleScan(now, IDLE_COLOR, 180);
+  fillRing(IDLE_COLOR, 110);
+
+  uint32_t age = now - stateStartedAt;
+  if (age < 1400) {
+    drawSingleScan(now, IDLE_COLOR, 55);
+  }
 }
 
 void renderThinking(uint32_t now) {
-  fillRing(THINKING_COLOR, 22);
-  drawOppositeDots(now, THINKING_COLOR, 120);
+  fillRing(THINKING_COLOR, 14);
+  drawChase(now, THINKING_COLOR, 4, 58);
 }
 
 void renderWorking(uint32_t now) {
-  fillRing(WORKING_COLOR, 24);
-  drawChase(now, WORKING_COLOR, 4, 58);
+  fillRing(WORKING_COLOR, 22);
+  drawOppositeDots(now, WORKING_COLOR, 120);
 }
 
 void renderWaiting(uint32_t now) {
@@ -228,12 +233,8 @@ void renderWaiting(uint32_t now) {
 }
 
 void renderSuccess(uint32_t now) {
-  fillRing(SUCCESS_COLOR, 110);
-
-  uint32_t age = now - stateStartedAt;
-  if (age < 1400) {
-    drawSingleScan(now, SUCCESS_COLOR, 55);
-  }
+  fillRing(SUCCESS_COLOR, 36);
+  drawSingleScan(now, SUCCESS_COLOR, 180);
 }
 
 void renderError(uint32_t now) {
@@ -245,8 +246,8 @@ void renderError(uint32_t now) {
 }
 
 void renderUnknown(uint32_t now) {
-  fillRing(UNKNOWN_COLOR, 32);
-  drawSingleScan(now, UNKNOWN_COLOR, 145);
+  fill_solid(leds, NUM_LEDS, CRGB::Black);
+  drawUnknownCue(now);
 }
 
 void fillRing(const CRGB &color, uint8_t scale) {
@@ -256,9 +257,9 @@ void fillRing(const CRGB &color, uint8_t scale) {
 void drawChase(uint32_t now, const CRGB &color, uint8_t count, uint16_t speedMs) {
   int head = (now / speedMs) % NUM_LEDS;
   for (uint8_t i = 0; i < count; i++) {
-    int fade = 255 - (i * 48);
-    if (fade < 70) {
-      fade = 70;
+    int fade = 128 - (i * 26);
+    if (fade < 36) {
+      fade = 36;
     }
     setPixelWrapped(head - i, scaledColor(color, (uint8_t)fade));
   }
@@ -282,6 +283,16 @@ void drawWaitingCue(bool active) {
   setPixelWrapped(0, center);
   setPixelWrapped(1, side);
   setPixelWrapped(23, side);
+}
+
+void drawUnknownCue(uint32_t now) {
+  uint16_t phase = (now - stateStartedAt) % 2400;
+  if (phase < 780) {
+    CRGB cue = scaledColor(UNKNOWN_COLOR, 48);
+    setPixelWrapped(23, cue);
+    setPixelWrapped(0, cue);
+    setPixelWrapped(1, cue);
+  }
 }
 
 void setPixelWrapped(int index, const CRGB &color) {

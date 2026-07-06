@@ -77,15 +77,17 @@ V3 default effects:
 
 V2 default effects:
 
+V2 uses a global brightness of `72/255` by default so bare WS2812B LEDs are less harsh without a diffuser. Lower `BRIGHTNESS` in the sketch if the ring is still too bright.
+
 | State | Color | Effect |
 | --- | --- | --- |
-| `idle` | Green `RGB(0, 220, 90)` | Low full ring with one slow scanning dot |
-| `thinking` | Blue `RGB(30, 110, 255)` | Low full ring with two opposite moving dots |
-| `working` | Amber `RGB(255, 140, 0)` | Low full ring with a four-dot chase |
+| `idle` | Green `RGB(0, 220, 90)` | Bright full ring with a short scan |
+| `thinking` | Blue `RGB(30, 110, 255)` | Very dim full ring with a low-brightness four-dot chase |
+| `working` | Amber `RGB(255, 140, 0)` | Low full ring with two opposite moving dots |
 | `waiting` | Purple `RGB(150, 45, 255)` plus white | Purple base with three bright white/purple prompt LEDs |
-| `success` | Deep teal `RGB(0, 80, 55)` | Deep teal full ring with a short scan |
+| `success` | Pure green `RGB(0, 255, 0)` | Low full ring with one slow scanning dot |
 | `error` | Red `RGB(255, 0, 0)` | Red triple flash |
-| `unknown` | Blue/purple `RGB(45, 40, 140)` | Low full ring with one slow scanning dot |
+| `unknown` | Pure blue `RGB(0, 0, 160)` | Dark background with three fixed dim blinking top LEDs for disconnected state |
 
 `StatusLightShowcase` does not read status from serial. It automatically cycles through `idle`, `thinking`, `working`, `waiting`, `success`, `error`, and `unknown`, holding each V3 effect for about 3.5 seconds. Use it when you want to preview every status color and animation without running the Go bridge.
 
