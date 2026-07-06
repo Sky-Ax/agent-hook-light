@@ -188,18 +188,19 @@ func writeHookStatus(path string, event codexEvent, session sessionStatus) error
 		current.Sessions = map[string]sessionStatus{}
 	}
 	current.Sessions[sessionKey(event)] = session
+	aggregate := aggregateSessionStatus(current.Sessions)
 
 	next := statusFile{
-		Provider:     session.Provider,
-		State:        session.State,
-		Color:        session.Color,
-		Reason:       session.Reason,
-		Event:        session.Event,
-		SessionID:    session.SessionID,
-		ToolName:     session.ToolName,
-		Cwd:          session.Cwd,
-		UpdatedAt:    session.UpdatedAt,
-		UpdatedAtISO: session.UpdatedAtISO,
+		Provider:     aggregate.Provider,
+		State:        aggregate.State,
+		Color:        aggregate.Color,
+		Reason:       aggregate.Reason,
+		Event:        aggregate.Event,
+		SessionID:    aggregate.SessionID,
+		ToolName:     aggregate.ToolName,
+		Cwd:          aggregate.Cwd,
+		UpdatedAt:    aggregate.UpdatedAt,
+		UpdatedAtISO: aggregate.UpdatedAtISO,
 		Sessions:     current.Sessions,
 	}
 
@@ -216,4 +217,50 @@ func sessionKey(event codexEvent) string {
 		return "__unknown"
 	}
 	return event.SessionID
+}
+
+func aggregateSessionStatus(sessions map[string]sessionStatus) sessionStatus {
+	best := sessionStatus{}
+	bestScore := -1
+
+	for _, session := range sessions {
+		score := aggregateStatePriority(session.State)
+		if score > bestScore || (score == bestScore && isSessionNewer(session, best)) {
+			best = session
+			bestScore = score
+		}
+	}
+
+	return best
+}
+
+func aggregateStatePriority(state string) int {
+	switch normalizeState(state) {
+	case "error":
+		return 6
+	case "waiting":
+		return 5
+	case "working":
+		return 4
+	case "thinking":
+		return 3
+	case "unknown":
+		return 2
+	case "success":
+		return 1
+	case "idle":
+		return 0
+	default:
+		return 0
+	}
+}
+
+func isSessionNewer(candidate sessionStatus, current sessionStatus) bool {
+	candidateTime, candidateErr := time.Parse(time.RFC3339Nano, candidate.UpdatedAtISO)
+	currentTime, currentErr := time.Parse(time.RFC3339Nano, current.UpdatedAtISO)
+	if candidateErr == nil && currentErr == nil {
+		return candidateTime.After(currentTime)
+	}
+
+	return candidate.UpdatedAtISO > current.UpdatedAtISO
 }

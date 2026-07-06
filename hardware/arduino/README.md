@@ -84,10 +84,10 @@ V2 uses a global brightness of `72/255` by default so bare WS2812B LEDs are less
 | `idle` | Green `RGB(0, 220, 90)` | Bright full ring with a short scan |
 | `thinking` | Blue `RGB(30, 110, 255)` | Very dim full ring with a low-brightness four-dot chase |
 | `working` | Amber `RGB(255, 140, 0)` | Low full ring with two opposite moving dots |
-| `waiting` | Purple `RGB(150, 45, 255)` plus white | Purple base with three bright white/purple prompt LEDs |
+| `waiting` | Low amber `RGB(140, 78, 0)` / dark amber `RGB(18, 8, 0)` | Even/odd alternating flash for confirmation required |
 | `success` | Pure green `RGB(0, 255, 0)` | Low full ring with one slow scanning dot |
 | `error` | Red `RGB(255, 0, 0)` | Red triple flash |
-| `unknown` | Pure blue `RGB(0, 0, 160)` | Dark background with three fixed dim blinking top LEDs for disconnected state |
+| `unknown` | Cool gray `RGB(80, 90, 100)` | Very dim full-ring slow breathing for disconnected state |
 
 `StatusLightShowcase` does not read status from serial. It automatically cycles through `idle`, `thinking`, `working`, `waiting`, `success`, `error`, and `unknown`, holding each V3 effect for about 3.5 seconds. Use it when you want to preview every status color and animation without running the Go bridge.
 

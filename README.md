@@ -1,118 +1,117 @@
 # Agent Hook Light
 
-Agent Hook Light 把 AI 编程 Agent 的 hook 状态变成桌面上的实体灯光信号。
+> Turn AI agent hook events into a physical ESP32 status light.
 
-当前支持 Codex：Codex hook 会写入本地状态文件，Go bridge 监听状态变化，并通过 USB 串口把状态发送给 ESP32-C3 + WS2812B 灯环。
+[简体中文](README.zh-CN.md)
 
-## 你需要准备
+[![Platform](https://img.shields.io/badge/platform-Windows-blue)](#2-quick-start)
+[![Device](https://img.shields.io/badge/device-ESP32--C3-green)](#3-hardware-and-firmware)
+[![LED](https://img.shields.io/badge/led-WS2812B-orange)](#4-status-and-light-effects)
+[![License](https://img.shields.io/badge/license-MIT-lightgrey)](#license)
 
-- Windows
-- ESP32-C3 开发板
-- WS2812 / WS2812B 灯环
-- 灯珠数量：24
-- 数据引脚：GPIO10
-- USB 数据线
+## 1. Overview And Demo
 
-## 快速使用
+Agent Hook Light is a local bridge between AI coding agents and a physical ambient light. It listens to agent lifecycle events, normalizes them into a small status protocol, and sends the current state to an ESP32-C3 + WS2812B LED ring.
 
-第一次使用建议按这个顺序：
+The current version ships with Codex Hooks as the first supported backend. Codex writes hook events into a local status file, the Go bridge watches that file, and the bridge sends status changes to the ESP32-C3 over USB serial.
 
-1. 给 ESP32-C3 刷入灯环固件。
-2. 双击根目录的 `start.cmd` 启动项目。
-3. 在 Codex 里正常对话，灯环会跟随 hook 状态变化。
+This project is not intended to be Codex-only. The long-term goal is a generic agent status light framework for Codex, Claude Code, Gemini CLI, OpenCode, Cursor, Aider, and any tool that can emit hook or lifecycle events.
 
-## 刷固件
+### Demo Video
 
-双击或运行：
+```text
+Coming soon.
+```
+
+Recommended demo scenes:
+
+| Scene | What should happen |
+| --- | --- |
+| Prompt submitted | Ring switches from `idle` to `thinking` |
+| Tool running | Ring enters `working` |
+| Permission required | Ring enters `waiting` |
+| Task completed | Ring enters `success` |
+| Device reconnect | Re-select COM port and resume sync |
+
+### Core Capabilities
+
+| Capability | Status |
+| --- | --- |
+| Codex Hooks backend | Supported |
+| Go bridge executable | Supported |
+| USB serial transport | Supported |
+| ESP32-C3 firmware | Supported |
+| Windows launcher | Supported |
+| Arduino firmware flasher | Supported |
+| Isolated runtime files under `data/` | Supported |
+| Wi-Fi / HTTP transport | Planned |
+
+## 2. Quick Start
+
+### Requirements
+
+| Item | Requirement |
+| --- | --- |
+| OS | Windows |
+| Agent | Codex with hooks support |
+| Hardware | ESP32-C3 development board |
+| LED | WS2812 / WS2812B LED ring |
+| Tested LED count | `24` |
+| Tested data pin | `GPIO10` |
+| Cable | USB data cable |
+
+### Step 1: Flash Firmware
+
+Run from the project root:
 
 ```powershell
 .\hardware\arduino\flash-firmware.cmd
 ```
 
-刷固件脚本会自动做这些事：
-
-- 检查并下载本项目自带的 Arduino CLI 到 `tools\arduino-cli`
-- 安装 ESP32 board support
-- 安装固定版本 `FastLED@3.9.4`
-- 列出可刷入的固件
-- 让你选择 ESP32-C3 的 COM 口
-- 编译并上传固件
-
-正常使用请选择：
+Recommended firmware:
 
 ```text
 Status Light V3
 ```
 
-固件目录在：
+The firmware flasher will:
 
-```text
-hardware\arduino\firmware
-```
+- Download project-managed Arduino CLI to `tools\arduino-cli`
+- Install ESP32 board support
+- Install pinned `FastLED@3.9.4`
+- List available firmware sketches
+- Ask you to choose the ESP32-C3 COM port
+- Compile and upload the selected firmware
 
-可选固件：
+### Step 2: Start The Bridge
 
-| 固件 | 用途 |
-| --- | --- |
-| `StatusLightV3` | 推荐使用。机器人拟人灯效，有眼神、眨眼、扫视、等待提示和完成庆祝。 |
-| `StatusLightV2` | 24 颗圆环简化版。颜色更克制，`waiting` 有醒目的白紫提示灯。 |
-| `StatusLightShowcase` | 灯光展示固件。自动循环展示 V3 的所有状态颜色和动画。 |
-| `StatusLightBaseV1` | 基础兼容固件，只支持旧版简单状态。 |
-| `RainbowLight` | 彩虹测试固件，用来确认灯环硬件正常。 |
-
-ESP32-C3 需要启用 USB CDC 串口。项目自带刷机脚本已经使用：
-
-```text
-esp32:esp32:esp32c3:CDCOnBoot=cdc
-```
-
-如果你不用脚本、改用 Arduino IDE 手动刷入，请把 **USB CDC On Boot** 设置为 `Enabled`。
-
-## 展示灯效
-
-如果你只是想确认每种状态颜色和动画是否正常，可以刷入：
-
-```text
-Status Light Showcase
-```
-
-这个固件不需要运行 `start.cmd`，刷入后会自动循环展示 V3 的机器人灯效：
-
-```text
-idle -> thinking -> working -> waiting -> success -> error -> unknown
-```
-
-每个状态大约展示 3.5 秒，然后进入下一个状态。
-
-## 启动项目
-
-刷好固件后，双击根目录：
+Run:
 
 ```powershell
 .\start.cmd
 ```
 
-启动器会自动做这些事：
+The launcher will:
 
-- 检查 Codex hook 是否已经安装
-- 如果 hook 缺失，提示你是否安装
-- 检查 Go bridge 程序是否存在
-- 如果 bridge 缺失，自动构建
-- 列出可用 COM 口
-- 让你选择 ESP32-C3 对应的 COM 口
-- 保存 COM 口选择
-- 启动状态桥接程序
+- Check whether Codex hooks are installed
+- Offer to install or update missing hooks
+- Check whether `bin\ai-hook-bridge.exe` exists
+- Build the Go bridge if needed
+- List available COM ports
+- Ask you to choose the ESP32-C3 port
+- Save the selected port to local config
+- Start the bridge process
 
-菜单操作：
+Launcher controls:
 
-| 按键 | 作用 |
+| Key | Action |
 | --- | --- |
-| `↑` / `↓` | 上下选择 |
-| `Space` / `Enter` | 确认 |
-| `Esc` | 取消 |
-| `Ctrl+C` | 停止正在运行的 bridge |
+| `Up` / `Down` | Move selection |
+| `Space` / `Enter` | Confirm |
+| `Esc` | Cancel |
+| `Ctrl+C` | Stop the running bridge |
 
-启动成功后会看到类似输出：
+Successful startup looks like:
 
 ```text
 Starting bridge on COM5...
@@ -122,25 +121,108 @@ Press Ctrl+C to stop.
 [2026-07-05 18:41:20] sent idle -> COM5
 ```
 
-保持这个窗口运行，Codex 状态变化时灯环才会同步变化。
+Keep this window running. If the bridge is stopped, the light will no longer receive new agent states.
 
-## 灯光状态
+### Step 3: Use Codex Normally
 
-`StatusLightV3` 支持这些状态和灯效：
+After the bridge is running, start a Codex conversation or execute a task. Codex hook events will update:
 
-| 状态 | 含义 | 灯光效果 |
+```text
+data\codex-status.json
+```
+
+The bridge watches that file and sends normalized states to the ESP32.
+
+## 3. Hardware And Firmware
+
+### Wiring
+
+| ESP32-C3 | WS2812B Ring |
+| --- | --- |
+| `5V` / `VBUS` | `5V` |
+| `GND` | `GND` |
+| `GPIO10` | `DIN` |
+
+Default firmware assumptions:
+
+| Setting | Value |
+| --- | --- |
+| LED chipset | WS2812 / WS2812B |
+| LED count | `24` |
+| Data pin | `GPIO10` |
+| Serial baud | `115200` |
+
+If your ring uses a different LED count or data pin, update the firmware constants before uploading.
+
+### Available Firmware
+
+Firmware directory:
+
+```text
+hardware\arduino\firmware
+```
+
+| Firmware | Purpose |
+| --- | --- |
+| `StatusLightV3` | Recommended. Robot-like status light with eyes, blink, scan, waiting cue, and success celebration. |
+| `StatusLightV2` | Simplified 24 LED ring version. Clear colors, restrained motion, stronger waiting indicator. |
+| `StatusLightShowcase` | Demo firmware. Automatically cycles through all V3 states and animations. |
+| `StatusLightBaseV1` | Basic compatibility firmware for the older minimal status protocol. |
+| `RainbowLight` | Hardware test firmware for checking LED wiring and color output. |
+
+### Manual Arduino IDE Upload
+
+The included flasher is recommended. If you upload manually with Arduino IDE:
+
+| Option | Value |
+| --- | --- |
+| Board package | `esp32` by Espressif |
+| Board | ESP32-C3 |
+| USB CDC On Boot | Enabled |
+| Library | `FastLED` |
+| Sketch | `hardware\arduino\firmware\StatusLightV3\StatusLightV3.ino` |
+
+The project flasher uses this FQBN:
+
+```text
+esp32:esp32:esp32c3:CDCOnBoot=cdc
+```
+
+USB CDC must be enabled, otherwise Windows may show a COM port but the firmware may not receive bridge messages correctly.
+
+## 4. Status And Light Effects
+
+### Status Protocol
+
+The bridge sends one normalized state per line:
+
+```text
+idle
+thinking
+working
+waiting
+success
+error
+unknown
+```
+
+### StatusLightV3 Effects
+
+`StatusLightV3` is the recommended firmware.
+
+| State | Meaning | V3 Light Effect |
 | --- | --- | --- |
-| `idle` | 空闲、没有正在执行的任务 | 青绿色双眼待机，偶尔眨眼和左右扫视 |
-| `thinking` | 已提交提示词，Agent 正在思考 | 蓝色眼神 + 环绕思考光点 |
-| `working` | 正在执行工具或处理任务 | 黄色/橙色马达追逐灯 + 忙碌眼神 |
-| `waiting` | 等待用户输入或授权 | 紫色注视 + 顶部白色提示点 |
-| `success` | 任务成功完成 | 绿色开心眼神 + 白绿庆祝扫光 |
-| `error` | 出错或需要注意 | 红色窄眼抖动 + 警觉闪烁 |
-| `unknown` | 未识别或状态不明确 | 蓝紫色不对称困惑眼神 |
+| `idle` | No active task | Cyan-green idle eyes, occasional blink and left-right scan |
+| `thinking` | Prompt submitted, agent is reasoning | Blue eyes with orbiting thinking pixels |
+| `working` | Agent is running tools or processing work | Yellow/orange motor chase with busy eyes |
+| `waiting` | Waiting for user input or permission | Purple gaze with a white top attention cue |
+| `success` | Task completed successfully | Green happy eyes with white-green celebration sweep |
+| `error` | Error or attention required | Red narrow-eye jitter with alert flashes |
+| `unknown` | State is unclear or unsupported | Blue-purple asymmetric confused eyes |
 
-兼容别名：
+### State Aliases
 
-| 输入状态 | 等同于 |
+| Input State | Normalized State |
 | --- | --- |
 | `submitted` | `thinking` |
 | `tool_running` | `working` |
@@ -152,105 +234,245 @@ Press Ctrl+C to stop.
 | `failure` | `error` |
 | `attention` | `error` |
 
-Codex hook 会映射到完整状态，不再只压缩成旧版兼容状态：
+### Codex Hook Mapping
 
-| Codex hook 事件 | Bridge 状态 | 灯效 |
+| Codex Hook Event | Bridge State | Meaning |
 | --- | --- | --- |
-| `UserPromptSubmit` | `thinking` | 开始思考 |
-| `PreToolUse` | `working` | 正在执行工具 |
-| `PostToolUse` | `thinking` | 工具返回后继续思考 |
-| `PermissionRequest` | `waiting` | 等待用户确认 |
-| `Stop` | `success` | 本轮完成 |
-| 解析错误 | `error` | 错误/注意 |
-| 未识别事件 | `unknown` | 状态不明确 |
+| `UserPromptSubmit` | `thinking` | Prompt submitted, agent begins reasoning |
+| `PreToolUse` | `working` | Tool execution is starting |
+| `PostToolUse` | `thinking` | Tool returned, agent continues reasoning |
+| `PermissionRequest` | `waiting` | User approval is required |
+| `Stop` | `success` | Turn completed |
+| `SubagentStop` | `thinking` | Subagent completed, main agent continues |
+| Parse error | `error` | Hook input could not be parsed |
+| Unknown event | `unknown` | Event is unsupported or unclear |
 
-旧状态 `attention` 仍然兼容，但会被 bridge 归一化为 `error`。
+### StatusLightV2 Effects
 
-`StatusLightV2` 保留同一套状态协议，灯效定位是“24 颗圆环简化版”。这一版不做呼吸和复杂叠加，主要靠清晰颜色和小幅运动表达状态：
+`StatusLightV2` uses the same protocol with a simpler 24 LED ring style.
 
-V2 默认全局亮度为 `72/255`，适合没有柔光罩的裸 WS2812B 灯环。如果仍然刺眼，可以继续下调固件里的 `BRIGHTNESS`。
+Default brightness: `72/255`.
 
-| 状态 | 颜色 | V2 灯效 |
+| State | Color | V2 Light Effect |
 | --- | --- | --- |
-| `idle` | 绿色 `RGB(0, 220, 90)` | 高亮全环 + 短暂扫描 |
-| `thinking` | 蓝色 `RGB(30, 110, 255)` | 微亮全环 + 低亮 4 点连续跑马 |
-| `working` | 黄橙色 `RGB(255, 140, 0)` | 低亮全环 + 对称双点慢速移动 |
-| `waiting` | 紫色 `RGB(150, 45, 255)` + 白色 | 紫色底光 + 顶部 3 颗白紫提示灯闪烁 |
-| `success` | 纯绿色 `RGB(0, 255, 0)` | 低亮全环 + 单点慢速扫描 |
-| `error` | 红色 `RGB(255, 0, 0)` | 红色三连闪 |
-| `unknown` | 纯蓝色 `RGB(0, 0, 160)` | 黑底 + 顶部 3 颗固定低亮慢闪灯，表示未连接 |
+| `idle` | Green `RGB(0, 220, 90)` | Bright full ring with short scan |
+| `thinking` | Blue `RGB(30, 110, 255)` | Dim full ring with four low-brightness running pixels |
+| `working` | Yellow-orange `RGB(255, 140, 0)` | Dim full ring with two symmetric moving pixels |
+| `waiting` | Low amber `RGB(140, 78, 0)` / dark amber `RGB(18, 8, 0)` | Even/odd alternating flash for confirmation required |
+| `success` | Green `RGB(0, 255, 0)` | Dim full ring with one slow scanning pixel |
+| `error` | Red `RGB(255, 0, 0)` | Three red alert flashes |
+| `unknown` | Cool gray `RGB(80, 90, 100)` | Very dim full-ring slow breathing for disconnected state |
 
-## 手动测试
+### Showcase Mode
 
-可以用 dry-run 检查 bridge 是否能读取状态：
+To preview all effects without running the bridge, flash:
+
+```text
+Status Light Showcase
+```
+
+It cycles automatically:
+
+```text
+idle -> thinking -> working -> waiting -> success -> error -> unknown
+```
+
+Each state is displayed for about 3.5 seconds.
+
+## Architecture
+
+```text
+Agent Hook Event
+    |
+    v
+Backend Adapter
+    |
+    v
+Normalized Status File
+    |
+    v
+Go Bridge
+    |
+    v
+Transport: Serial today, Wi-Fi / HTTP later
+    |
+    v
+ESP32-C3 Firmware
+    |
+    v
+WS2812B LED Ring
+```
+
+Current Codex flow:
+
+```text
+Codex Hooks
+    |
+    v
+bin/codex-hook.cmd
+    |
+    v
+bin/ai-hook-bridge.exe hook
+    |
+    v
+data/codex-status.json
+    |
+    v
+bin/ai-hook-bridge.exe bridge
+    |
+    v
+COM port, for example COM4
+    |
+    v
+ESP32-C3 + WS2812B
+```
+
+## Supported Agents
+
+Agent Hook Light uses a backend adapter model. Each backend only needs to map its own hook or lifecycle format into the shared status protocol.
+
+| Agent / Tool | Support Level | Adapter Type | Notes |
+| --- | --- | --- | --- |
+| Codex | Supported | Codex Hooks | First implemented backend. Writes `data\codex-status.json` and drives the bridge today. |
+| Claude Code | Planned | Hook / lifecycle event adapter | Target backend for Claude Code style hook workflows. |
+| Gemini CLI | Planned | Local event / command lifecycle adapter | Depends on available hook or lifecycle signals. |
+| OpenCode | Planned | Hook adapter | Intended for OpenCode-style agent sessions. |
+| Cursor | Researching | Local workflow/status adapter | Requires a reliable local event source. |
+| Aider | Researching | Terminal session adapter | Could map command/session state into the shared protocol. |
+| Custom Agent | Planned | File / stdout / webhook adapter | Any tool that can emit normalized states can integrate. |
+
+## Control Modes
+
+| Mode | Status | Description |
+| --- | --- | --- |
+| Go Hook Adapter | Supported | `ai-hook-bridge.exe hook` parses Codex hook input and writes normalized status. |
+| File Watch Bridge | Supported | `ai-hook-bridge.exe bridge` watches the local status file and sends changes to the device. |
+| USB Serial Control | Supported | Sends status text to ESP32 over a COM port such as `COM4`. |
+| ESP32-C3 LED Ring | Supported | Tested with ESP32-C3 and a 24 LED WS2812B ring on GPIO10. |
+| Log Rotation | Supported | Rotates Codex hook JSONL logs to avoid unbounded runtime log growth. |
+| One-Click Launcher | Supported | `start.cmd` checks setup, builds if needed, selects COM port, and starts the bridge. |
+| One-Click Firmware Flashing | Supported | `hardware\arduino\flash-firmware.cmd` manages Arduino CLI, libraries, build, and upload. |
+| Wi-Fi HTTP Control | Planned | Send status to ESP32 over LAN instead of USB serial. |
+| Tray App / Background Service | Planned | Run the bridge quietly without keeping a console window open. |
+| Configurable Mapping | Planned | Customize states, colors, ports, URLs, and effect profiles. |
+
+## Configuration
+
+The launcher stores local runtime configuration under:
+
+```text
+data\agent-hook-light.config.json
+```
+
+Runtime status and hook logs are written under `data/` and ignored by Git.
+
+Important runtime files:
+
+| File | Purpose |
+| --- | --- |
+| `data\codex-status.json` | Latest normalized Codex status |
+| `data\codex-hook-log.jsonl` | JSONL hook event log |
+| `data\codex-hook-wrapper.log` | Windows wrapper start/exit log |
+| `data\agent-hook-light.config.json` | Local launcher configuration |
+
+## Manual Testing
+
+List serial ports:
+
+```powershell
+.\bin\ai-hook-bridge.exe bridge -list-ports
+```
+
+Dry-run the bridge:
 
 ```powershell
 .\bin\ai-hook-bridge.exe bridge -dry-run -once
 ```
 
-也可以手动触发一次 hook：
+Trigger the hook manually:
 
 ```powershell
 '{"hook_event_name":"UserPromptSubmit","session_id":"manual-test"}' | .\bin\ai-hook-bridge.exe hook
 ```
 
-然后运行：
+Then start the launcher:
 
 ```powershell
 .\start.cmd
 ```
 
-## 常见问题
+## Troubleshooting
 
-### 找不到 COM 口
+### No COM Port Found
 
-检查 USB 线是否支持数据传输，重新插拔 ESP32-C3，然后重新运行 `start.cmd` 或 `flash-firmware.cmd`。
+Check that the USB cable supports data transfer. Replug the ESP32-C3 and rerun `start.cmd` or `flash-firmware.cmd`.
 
-### 多个 COM 口不知道选哪个
+### Multiple COM Ports
 
-先拔掉 ESP32-C3，运行一次观察列表；再插上 ESP32-C3，多出来的那个通常就是开发板。
+Unplug the ESP32-C3 and check the list once. Plug it back in and select the newly added COM port.
 
-### 串口写入超时
+### Serial Write Timeout
 
-常见原因是固件没有启用 USB CDC，或者刷入了不读串口的 demo 固件。
+Common causes:
 
-建议重新运行：
+- Firmware was uploaded without USB CDC enabled
+- A demo firmware that does not read serial is currently flashed
+- Another process is holding the COM port
+
+Recommended fix:
 
 ```powershell
 .\hardware\arduino\flash-firmware.cmd
 ```
 
-并选择 `Status Light V3`。
-
-### 灯不亮
-
-依次检查：
-
-- 是否刷入了 `Status Light V3`
-- 灯环 DIN 是否接到 GPIO10
-- 5V / GND 是否接好
-- 灯珠数量是否是 24
-- 是否选择了正确 COM 口
-
-## 项目结构
+Select:
 
 ```text
-start.cmd                 新手双击启动入口
+Status Light V3
+```
+
+### LED Ring Does Not Light Up
+
+Check:
+
+- Firmware is `StatusLightV3`
+- LED DIN is connected to GPIO10
+- 5V and GND are connected correctly
+- LED count is 24
+- Correct COM port was selected
+
+### Hook Logs Update When Opening Old Codex Threads
+
+Codex hooks are global. Opening or restoring a historical Codex thread can trigger lifecycle events even if you did not start a new task.
+
+Recommended filtering strategy:
+
+- Keep full hook logs for debugging
+- Only let filtered events update the light status
+- Ignore Codex app internal `cwd` values
+- Debounce repeated events
+- Prefer `PreToolUse`, `PermissionRequest`, and `Stop` as strong light-driving events
+
+## Project Structure
+
+```text
+start.cmd                         New-user launcher
 bin/
-  agent-hook-light.ps1     启动器逻辑
-  codex-hook.cmd           Codex hook 命令包装
-  ai-hook-bridge.exe       Go bridge 可执行文件
-  install.ps1              Codex hook 安装/检查脚本
+  agent-hook-light.ps1             Launcher logic
+  codex-hook.cmd                   Codex hook command wrapper
+  ai-hook-bridge.exe               Go bridge executable
+  install.ps1                      Codex hook install/check script
 bridge/
-  main.go                  CLI 入口
-  hook.go                  Codex hook 解析和状态写入
-  bridge.go                状态文件监听和串口发送
-data/
-  .gitkeep                 运行时状态目录占位
+  main.go                          CLI entrypoint
+  hook.go                          Codex hook parser and status writer
+  bridge.go                        Status-file watcher and serial sender
+  log.go                           Rotating hook JSONL log writer
+  types.go                         Shared status and config structs
+  util.go                          Project root, env, time, and console helpers
 hardware/
   arduino/
-    flash-firmware.cmd     固件刷写入口
-    flash-firmware.ps1     固件刷写逻辑
+    flash-firmware.cmd             Firmware flashing entrypoint
+    flash-firmware.ps1             Firmware flashing logic
     firmware/
       StatusLightV3/
       StatusLightV2/
@@ -263,11 +485,9 @@ test/
   firmware-flasher.test.ps1
 ```
 
-运行时状态和日志会写入 `data/`，不会提交到 Git。
+## Development
 
-## 开发
-
-运行测试：
+Run tests:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\test\install.test.ps1
@@ -277,12 +497,33 @@ cd bridge
 go test ./...
 ```
 
-修改 Go 代码后重新构建：
+Rebuild after changing Go code:
 
 ```powershell
 cd bridge
 go build -o ..\bin\ai-hook-bridge.exe .
 ```
+
+## Roadmap
+
+- Add demo video and screenshots
+- Add release packages with prebuilt binaries
+- Add Wi-Fi HTTP device mode
+- Add configurable status-to-effect mapping
+- Add Windows tray app or background service
+- Add automatic COM port detection with device identity checks
+- Add richer effects for long-running work, approval requests, and completion
+- Add adapters for more hook-capable AI agent tools
+
+## Contributing
+
+Useful contribution areas:
+
+- New agent backends
+- New firmware effects
+- Better Windows launcher UX
+- Wi-Fi / HTTP device transport
+- Documentation, diagrams, and demo videos
 
 ## License
 

@@ -10,7 +10,7 @@
 #define COLOR_ORDER GRB
 #define INPUT_MAX 48
 #define FRAME_MS 25
-#define WAITING_FLASH_MS 800
+#define WAITING_FLASH_MS 900
 
 enum AgentState : uint8_t {
   STATE_IDLE,
@@ -25,10 +25,11 @@ enum AgentState : uint8_t {
 const CRGB IDLE_COLOR = CRGB(0, 220, 90);
 const CRGB THINKING_COLOR = CRGB(30, 110, 255);
 const CRGB WORKING_COLOR = CRGB(255, 140, 0);
-const CRGB WAITING_COLOR = CRGB(150, 45, 255);
+const CRGB WAITING_BRIGHT_COLOR = CRGB(140, 78, 0);
+const CRGB WAITING_DIM_COLOR = CRGB(18, 8, 0);
 const CRGB SUCCESS_COLOR = CRGB(0, 255, 0);
 const CRGB ERROR_COLOR = CRGB(255, 0, 0);
-const CRGB UNKNOWN_COLOR = CRGB(0, 0, 160);
+const CRGB UNKNOWN_COLOR = CRGB(80, 90, 100);
 
 CRGB leds[NUM_LEDS];
 
@@ -55,8 +56,7 @@ void fillRing(const CRGB &color, uint8_t scale);
 void drawChase(uint32_t now, const CRGB &color, uint8_t count, uint16_t speedMs);
 void drawOppositeDots(uint32_t now, const CRGB &color, uint16_t speedMs);
 void drawSingleScan(uint32_t now, const CRGB &color, uint16_t speedMs);
-void drawWaitingCue(bool active);
-void drawUnknownCue(uint32_t now);
+void drawWaitingCue(bool evenActive);
 void setPixelWrapped(int index, const CRGB &color);
 CRGB scaledColor(CRGB color, uint8_t scale);
 
@@ -225,11 +225,9 @@ void renderWorking(uint32_t now) {
 }
 
 void renderWaiting(uint32_t now) {
-  fillRing(WAITING_COLOR, 42);
-
   uint32_t age = now - stateStartedAt;
-  bool active = (age % WAITING_FLASH_MS) < 280;
-  drawWaitingCue(active);
+  bool evenActive = (age % WAITING_FLASH_MS) < (WAITING_FLASH_MS / 2);
+  drawWaitingCue(evenActive);
 }
 
 void renderSuccess(uint32_t now) {
@@ -246,8 +244,11 @@ void renderError(uint32_t now) {
 }
 
 void renderUnknown(uint32_t now) {
-  fill_solid(leds, NUM_LEDS, CRGB::Black);
-  drawUnknownCue(now);
+  uint16_t phase = (now - stateStartedAt) % 3200;
+  uint16_t ramp = phase < 1600 ? phase : 3200 - phase;
+  uint8_t scale = 7 + (uint8_t)(((uint32_t)ramp * 16) / 1600);
+
+  fillRing(UNKNOWN_COLOR, scale);
 }
 
 void fillRing(const CRGB &color, uint8_t scale) {
@@ -276,22 +277,10 @@ void drawSingleScan(uint32_t now, const CRGB &color, uint16_t speedMs) {
   setPixelWrapped(head, scaledColor(color, 190));
 }
 
-void drawWaitingCue(bool active) {
-  CRGB center = active ? CRGB::White : scaledColor(WAITING_COLOR, 150);
-  CRGB side = active ? scaledColor(WAITING_COLOR, 220) : scaledColor(WAITING_COLOR, 110);
-
-  setPixelWrapped(0, center);
-  setPixelWrapped(1, side);
-  setPixelWrapped(23, side);
-}
-
-void drawUnknownCue(uint32_t now) {
-  uint16_t phase = (now - stateStartedAt) % 2400;
-  if (phase < 780) {
-    CRGB cue = scaledColor(UNKNOWN_COLOR, 48);
-    setPixelWrapped(23, cue);
-    setPixelWrapped(0, cue);
-    setPixelWrapped(1, cue);
+void drawWaitingCue(bool evenActive) {
+  for (uint8_t i = 0; i < NUM_LEDS; i++) {
+    bool isEven = (i % 2) == 0;
+    leds[i] = (isEven == evenActive) ? WAITING_BRIGHT_COLOR : WAITING_DIM_COLOR;
   }
 }
 

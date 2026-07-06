@@ -123,6 +123,44 @@ func TestMapHookStatusUsesExpandedStatusVocabulary(t *testing.T) {
 	}
 }
 
+func TestWriteHookStatusKeepsWaitingSessionAsGlobalStatus(t *testing.T) {
+	dir := t.TempDir()
+	statusPath := filepath.Join(dir, "codex-status.json")
+	logPath := filepath.Join(dir, "codex-hook-log.jsonl")
+
+	waitingAt := time.Date(2026, 7, 6, 16, 40, 17, 0, time.UTC)
+	err := runHook(
+		[]string{"-status", statusPath, "-log", logPath},
+		strings.NewReader(`{"hook_event_name":"PermissionRequest","session_id":"waiting-session","cwd":"E:\\ai\\ai-hook"}`),
+		waitingAt,
+	)
+	if err != nil {
+		t.Fatalf("runHook waiting failed: %v", err)
+	}
+
+	stoppedAt := time.Date(2026, 7, 6, 16, 42, 40, 0, time.UTC)
+	err = runHook(
+		[]string{"-status", statusPath, "-log", logPath},
+		strings.NewReader(`{"hook_event_name":"Stop","session_id":"stopped-session","cwd":"E:\\ai\\ai-hook"}`),
+		stoppedAt,
+	)
+	if err != nil {
+		t.Fatalf("runHook stop failed: %v", err)
+	}
+
+	var status statusFile
+	readJSONFile(t, statusPath, &status)
+	if status.State != "waiting" {
+		t.Fatalf("global state = %q, want waiting", status.State)
+	}
+	if status.SessionID != "waiting-session" {
+		t.Fatalf("global session_id = %q, want waiting-session", status.SessionID)
+	}
+	if status.Sessions["stopped-session"].State != "success" {
+		t.Fatalf("stopped session state = %q, want success", status.Sessions["stopped-session"].State)
+	}
+}
+
 func TestNormalizeStateAllowsExpandedStatusVocabulary(t *testing.T) {
 	tests := map[string]string{
 		"idle":      "idle",

@@ -114,10 +114,10 @@ foreach ($stateName in @("idle", "thinking", "working", "waiting", "success", "e
 foreach ($aliasName in @("submitted", "tool_running", "waiting_user", "waiting_permission", "done", "complete", "failed", "failure", "attention")) {
   Assert-True ($statusV2Source -like "*`"$aliasName`"*") "V2 firmware should support the '$aliasName' compatibility alias."
 }
-foreach ($simpleHelper in @("IDLE_COLOR", "SUCCESS_COLOR", "WAITING_COLOR", "drawChase", "drawSingleScan", "drawWaitingCue")) {
+foreach ($simpleHelper in @("IDLE_COLOR", "SUCCESS_COLOR", "WAITING_BRIGHT_COLOR", "WAITING_DIM_COLOR", "drawChase", "drawSingleScan", "drawWaitingCue")) {
   Assert-True ($statusV2Source -like "*$simpleHelper*") "V2 firmware should include the simple ring helper '$simpleHelper'."
 }
-foreach ($colorLiteral in @("CRGB(0, 220, 90)", "CRGB(0, 80, 55)", "CRGB(30, 110, 255)", "CRGB(255, 140, 0)", "CRGB(150, 45, 255)", "CRGB(45, 40, 140)")) {
+foreach ($colorLiteral in @("CRGB(0, 220, 90)", "CRGB(30, 110, 255)", "CRGB(255, 140, 0)", "CRGB(140, 78, 0)", "CRGB(18, 8, 0)", "CRGB(0, 255, 0)", "CRGB(255, 0, 0)", "CRGB(80, 90, 100)")) {
   Assert-True ($statusV2Source -like "*$colorLiteral*") "V2 firmware should include the simplified color $colorLiteral."
 }
 foreach ($complexPattern in @("ENTER_PULSE_MS", "drawStatusAckPulse", "qadd8", "addPixelWrapped")) {
