@@ -22,21 +22,35 @@ Requirements:
 - WS2812 / WS2812B LED ring
 - USB data cable
 
-Flash the device:
+### 1. Flash The Device
+
+Connect the ESP32-C3 and run:
 
 ```powershell
 .\hardware\arduino\flash-firmware.cmd
 ```
 
-Start the bridge:
+The flasher will download the project-managed Arduino CLI, install the ESP32 board package and FastLED, ask for the firmware and COM port, then compile and upload the sketch.
+
+Recommended firmware:
+
+```text
+Status Light V3
+```
+
+Hardware and firmware details are in [hardware/arduino/README.md](hardware/arduino/README.md).
+
+### 2. Start The Bridge
+
+Run:
 
 ```powershell
 .\start.cmd
 ```
 
-Then use Codex normally. The light follows agent status changes.
+The launcher checks Codex hooks, installs or updates them if needed, builds the Go bridge if missing, asks for the ESP32 COM port, then starts the bridge.
 
-Hardware and firmware details are in [hardware/arduino/README.md](hardware/arduino/README.md).
+Keep this window running while using Codex. The light follows agent status changes.
 
 ## Status Colors
 
@@ -52,34 +66,21 @@ Hardware and firmware details are in [hardware/arduino/README.md](hardware/ardui
 
 ## Agent Support
 
-| Agent | Status |
-| --- | --- |
-| Codex | Supported |
-| Claude Code | Planned |
-| Gemini CLI | Planned |
-| OpenCode | Planned |
-| Cursor | Researching |
-| Aider | Researching |
-| Custom agent | Planned |
+| Agent | Status | Notes |
+| --- | --- | --- |
+| Codex | Supported | Uses Codex Hooks today. |
+| Claude Code | Planned | Hook / lifecycle adapter. |
+| Gemini CLI | Planned | Adapter depends on available lifecycle signals. |
+| OpenCode | Planned | Hook adapter. |
+| Cursor | Researching | Needs a reliable local status source. |
+| Aider | Researching | Could map terminal/session state. |
+| Custom agent | Planned | File, stdout, or webhook adapter. |
 
-## Development
+## Custom Development
 
-Run tests:
+If you need a custom agent adapter, firmware effect, Wi-Fi control mode, hardware build, or product integration, contact me on WeChat.
 
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\test\install.test.ps1
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\test\launcher.test.ps1
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\test\firmware-flasher.test.ps1
-cd bridge
-go test ./...
-```
-
-Build the bridge:
-
-```powershell
-cd bridge
-go build -o ..\bin\ai-hook-bridge.exe .
-```
+<img src="assets/wechat-contact.jpg" alt="WeChat contact QR code" width="320">
 
 ## License
 
