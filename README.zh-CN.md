@@ -80,7 +80,7 @@ Status Light V3
 
 如果您有自定义 Agent 接入、灯效定制、Wi-Fi 控制、硬件制作或产品化集成需求，可以扫码添加微信联系。
 
-<img src="assets/wechat-contact.jpg" alt="微信联系二维码" width="320">
+<img src="assets/wechat-contact.png" alt="微信联系二维码" width="320">
 
 ## 许可证
 

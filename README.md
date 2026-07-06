@@ -80,7 +80,7 @@ Keep this window running while using Codex. The light follows agent status chang
 
 If you need a custom agent adapter, firmware effect, Wi-Fi control mode, hardware build, or product integration, contact me on WeChat.
 
-<img src="assets/wechat-contact.jpg" alt="WeChat contact QR code" width="320">
+<img src="assets/wechat-contact.png" alt="WeChat contact QR code" width="320">
 
 ## License
 
