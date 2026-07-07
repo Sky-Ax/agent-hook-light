@@ -8,14 +8,7 @@ Agent Hook Light turns AI agent hook events into visible desk status colors. Cod
 
 ## Demo
 
-<table>
-  <tr>
-    <td>
-      <video src="https://github.com/Sky-Ax/agent-hook-light/releases/download/v0.1.0/demo.mp4" controls="controls" muted="muted" width="720" style="max-width:100%; min-height:360px">
-      </video>
-    </td>
-  </tr>
-</table>
+[![Agent Hook Light demo](assets/demo.gif)](https://github.com/Sky-Ax/agent-hook-light/releases/download/v0.1.0/demo.mp4)
 
 ## Quick Start
 
