@@ -8,9 +8,9 @@ Agent Hook Light turns AI agent hook events into visible desk status colors. Cod
 
 ## Demo
 
-```text
-Coming soon.
-```
+[Watch the demo video](assets/demo.mp4)
+
+<video src="assets/demo.mp4" controls width="720"></video>
 
 ## Quick Start
 
