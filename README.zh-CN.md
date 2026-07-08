@@ -74,9 +74,9 @@ Status Light V3
 | Aider | 调研中 | 可考虑映射终端或会话状态。 |
 | 自定义 Agent | 计划支持 | 文件、stdout 或 webhook 适配器。 |
 
-## 定制化开发
+## 定制化开发与硬件购买
 
-如果您有自定义 Agent 接入、灯效定制、Wi-Fi 控制、硬件制作或产品化集成需求，可以扫码添加微信联系。
+如果您有自定义 Agent 接入、灯效定制、Wi-Fi 控制、硬件制作、成品硬件购买或产品化集成需求，可以扫码添加微信联系。
 
 <img src="assets/wechat-contact.png" alt="微信联系二维码" width="320">
 

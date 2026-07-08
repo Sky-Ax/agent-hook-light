@@ -74,9 +74,9 @@ Keep this window running while using Codex. The light follows agent status chang
 | Aider | Researching | Could map terminal/session state. |
 | Custom agent | Planned | File, stdout, or webhook adapter. |
 
-## Custom Development
+## Custom Development And Hardware
 
-If you need a custom agent adapter, firmware effect, Wi-Fi control mode, hardware build, or product integration, contact me on WeChat.
+If you need custom agent integration, firmware effects, Wi-Fi control, hardware assembly, finished device purchase, or product integration, contact me on WeChat.
 
 <img src="assets/wechat-contact.png" alt="WeChat contact QR code" width="320">
 
